@@ -1,0 +1,214 @@
+import { useState, useEffect } from 'react';
+import './App.css';
+
+type Mode = 'strict' | 'permissive';
+type Decision = 'allow' | 'notify' | 'warn' | 'auto_scrub' | 'block';
+
+interface Settings {
+  mode: Mode;
+  overrides: Record<string, Decision>;
+  scrubCount: number;
+}
+
+interface EntityConfig {
+  type: string;
+  label: string;
+  tier: 'high' | 'medium' | 'low';
+  description: string;
+}
+
+const ENTITIES: EntityConfig[] = [
+  { type: 'EMAIL_ADDRESS', label: 'Email address', tier: 'high', description: 'e.g. alice@example.com' },
+  { type: 'PHONE_NUMBER',  label: 'Phone number',  tier: 'high', description: 'e.g. +1 555 867 5309' },
+  { type: 'CREDIT_CARD',  label: 'Credit card',   tier: 'high', description: 'Validated with Luhn check' },
+  { type: 'IBAN_CODE',    label: 'IBAN',           tier: 'high', description: 'International bank account number' },
+  { type: 'SSN',          label: 'Social security number', tier: 'high', description: 'US SSN format' },
+  { type: 'IP_ADDRESS',   label: 'IP address',    tier: 'high', description: 'IPv4 and IPv6' },
+  { type: 'CRYPTO',       label: 'Crypto address', tier: 'high', description: 'Bitcoin, Ethereum addresses' },
+  { type: 'SECRET_KEY',   label: 'Secret key / token', tier: 'high', description: 'Bearer, sk-, ghp_, passwords' },
+  { type: 'PERSON',       label: 'Person name',   tier: 'medium', description: 'Detected by NLP (English)' },
+  { type: 'LOCATION',     label: 'Location',      tier: 'medium', description: 'City, country, address (English)' },
+  { type: 'ORG',          label: 'Organisation',  tier: 'medium', description: 'Company, institution (English)' },
+  { type: 'DATE_OF_BIRTH',label: 'Date of birth', tier: 'low',    description: 'Only when preceded by DOB label' },
+];
+
+const DECISION_LABELS: Record<Decision, string> = {
+  allow:      'Allow (skip)',
+  notify:     'Notify (passive pill)',
+  warn:       'Warn (banner, can override)',
+  auto_scrub: 'Auto-scrub',
+  block:      'Block (must act)',
+};
+
+const TIER_COLORS: Record<string, string> = {
+  high: '#e53e3e',
+  medium: '#d97706',
+  low: '#2f855a',
+};
+
+const DEFAULT_SETTINGS: Settings = {
+  mode: 'strict',
+  overrides: {},
+  scrubCount: 0,
+};
+
+// Ordered from most to least restrictive (for the <select>)
+const DECISIONS: Decision[] = ['block', 'auto_scrub', 'warn', 'notify', 'allow'];
+
+function App() {
+  const [settings, setSettings] = useState<Settings>(DEFAULT_SETTINGS);
+  const [saved, setSaved] = useState(false);
+
+  useEffect(() => {
+    browser.storage.sync
+      .get(DEFAULT_SETTINGS as unknown as Record<string, unknown>)
+      .then((s) => setSettings(s as unknown as Settings));
+  }, []);
+
+  function save(next: Settings) {
+    setSettings(next);
+    browser.storage.sync.set(next as unknown as Record<string, unknown>).then(() => {
+      setSaved(true);
+      setTimeout(() => setSaved(false), 2000);
+    });
+  }
+
+  function setMode(mode: Mode) {
+    save({ ...settings, mode });
+  }
+
+  function setOverride(entityType: string, decision: Decision | '') {
+    const overrides = { ...settings.overrides };
+    if (decision === '') {
+      delete overrides[entityType];
+    } else {
+      overrides[entityType] = decision;
+    }
+    save({ ...settings, overrides });
+  }
+
+  function resetAll() {
+    save({ ...DEFAULT_SETTINGS, scrubCount: settings.scrubCount });
+  }
+
+  return (
+    <div className="options">
+      <header>
+        <div className="header-title">
+          <span className="logo">🔒</span>
+          <h1>PII Airlock — Options</h1>
+        </div>
+        {saved && <span className="saved-badge">✓ Saved</span>}
+      </header>
+
+      {/* Mode */}
+      <section className="section">
+        <h2>Detection mode</h2>
+        <div className="mode-options">
+          {(['strict', 'permissive'] as Mode[]).map((m) => (
+            <label key={m} className={`mode-card ${settings.mode === m ? 'active' : ''}`}>
+              <input
+                type="radio"
+                name="mode"
+                value={m}
+                checked={settings.mode === m}
+                onChange={() => setMode(m)}
+              />
+              <div className="mode-card-body">
+                <strong>{m === 'strict' ? '🛡 Strict (recommended)' : '🔔 Permissive'}</strong>
+                <span>
+                  {m === 'strict'
+                    ? 'Blocks high-risk PII. Auto-scrubs names and locations.'
+                    : 'Warns on high-risk PII. Allows names and locations through.'}
+                </span>
+              </div>
+            </label>
+          ))}
+        </div>
+      </section>
+
+      {/* Entity overrides */}
+      <section className="section">
+        <h2>Per-entity policy</h2>
+        <p className="section-desc">
+          Override the default action for specific entity types. Leave blank to use the mode default.
+        </p>
+        <table className="entity-table">
+          <thead>
+            <tr>
+              <th>Entity</th>
+              <th>Tier</th>
+              <th>Default action</th>
+              <th>Override</th>
+            </tr>
+          </thead>
+          <tbody>
+            {ENTITIES.map((e) => {
+              const defaultDecision = e.tier === 'high'
+                ? (settings.mode === 'strict' ? 'block' : 'auto_scrub')
+                : e.tier === 'medium'
+                ? (settings.mode === 'strict' ? 'auto_scrub' : 'warn')
+                : (settings.mode === 'strict' ? 'warn' : 'notify');
+
+              const override = settings.overrides[e.type];
+
+              return (
+                <tr key={e.type} className={override ? 'overridden' : ''}>
+                  <td>
+                    <span className="entity-label">{e.label}</span>
+                    <span className="entity-desc">{e.description}</span>
+                  </td>
+                  <td>
+                    <span className="tier-badge" style={{ color: TIER_COLORS[e.tier] }}>
+                      {e.tier}
+                    </span>
+                  </td>
+                  <td>
+                    <span className="default-decision">{DECISION_LABELS[defaultDecision]}</span>
+                  </td>
+                  <td>
+                    <select
+                      value={override ?? ''}
+                      onChange={(ev) => setOverride(e.type, ev.target.value as Decision | '')}
+                    >
+                      <option value="">(use default)</option>
+                      {DECISIONS.map((d) => (
+                        <option key={d} value={d}>{DECISION_LABELS[d]}</option>
+                      ))}
+                    </select>
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </section>
+
+      {/* Stats */}
+      <section className="section stats-section">
+        <h2>Statistics</h2>
+        <div className="stat-row">
+          <span>Total items scrubbed (all sessions)</span>
+          <strong>{settings.scrubCount}</strong>
+        </div>
+      </section>
+
+      {/* Reset */}
+      <section className="section">
+        <h2>Reset</h2>
+        <button className="reset-btn" onClick={resetAll}>
+          Reset all settings to defaults
+        </button>
+      </section>
+
+      <footer>
+        <span>PII Airlock — open source, no data leaves your browser.</span>
+        <a href="https://github.com/mat/pii-airlock-extension" target="_blank" rel="noopener">
+          GitHub
+        </a>
+      </footer>
+    </div>
+  );
+}
+
+export default App;
