@@ -51,8 +51,8 @@ export async function analyze(
   try {
     const lang = detectLanguage(text);
 
-    // Layer 1: regex (sync)
-    const regexHits = detectRegex(text);
+    // Layer 1: regex (sync) — locale-aware phone patterns require lang
+    const regexHits = detectRegex(text, lang);
 
     // Layer 2: NLP (async, English only)
     const nlpHits = options.skipNlp ? [] : await detectNlp(text, lang);

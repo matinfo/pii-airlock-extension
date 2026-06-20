@@ -27,17 +27,22 @@ export async function detectNlp(text: string, lang: string): Promise<Detection[]
       view.forEach((match: { text: () => string }) => {
         const term = match.text();
         if (!term || term.length < 2) return;
-        // Find first occurrence in text
-        const idx = text.indexOf(term);
-        if (idx === -1) return;
-        results.push({
-          entityType,
-          start: idx,
-          end: idx + term.length,
-          score,
-          value: term,
-          source: 'nlp',
-        });
+        // Find ALL occurrences of this term in the text, not just the first.
+        // A name like "Alice" may appear more than once; each is independent PII.
+        let searchFrom = 0;
+        while (searchFrom < text.length) {
+          const idx = text.indexOf(term, searchFrom);
+          if (idx === -1) break;
+          results.push({
+            entityType,
+            start: idx,
+            end: idx + term.length,
+            score,
+            value: term,
+            source: 'nlp',
+          });
+          searchFrom = idx + 1; // advance past this match to find next
+        }
       });
     }
 
