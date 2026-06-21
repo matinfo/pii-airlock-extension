@@ -55,8 +55,12 @@ function App() {
     <div className="popup">
       <header>
         <img src={logo} alt="PII Airlock" className="logo" />
-        <span className={`status-dot ${active ? 'on' : 'off'}`} title={active ? 'Active' : 'Paused'} />
       </header>
+
+      <div className={`protection-status ${active ? 'on' : 'off'}`}>
+        <span className="status-dot" />
+        <span className="status-label">{active ? 'Protection active' : 'Protection paused'}</span>
+      </div>
 
       <div className="site-status">
         {currentSite
