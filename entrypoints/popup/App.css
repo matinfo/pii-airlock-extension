@@ -15,7 +15,7 @@ body {
   padding: 16px;
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 8px;
 }
 header {
   display: flex;
@@ -52,10 +52,20 @@ header h1 {
   border-radius: 20px;
   align-self: center;
 }
-.protection-status.on  { background: #dcfce7; color: #15803d; }
-.protection-status.off { background: #f3f4f6; color: #6b7280; }
-.protection-status.on  .status-dot { background: #22c55e; }
-.protection-status.off .status-dot { background: #9ca3af; }
+.protection-status.on {
+  background: #dcfce7;
+  color: #15803d;
+}
+.protection-status.off {
+  background: #f3f4f6;
+  color: #6b7280;
+}
+.protection-status.on .status-dot {
+  background: #22c55e;
+}
+.protection-status.off .status-dot {
+  background: #9ca3af;
+}
 .site-status {
   background: #f3f4f6;
   border-radius: 8px;
@@ -82,7 +92,10 @@ header h1 {
   font-size: 12px;
   font-weight: 700;
   cursor: pointer;
+  transition: filter 0.15s, transform 0.1s;
 }
+.mode-btn:hover  { filter: brightness(0.92); transform: scale(1.04); }
+.mode-btn:active { filter: brightness(0.85); transform: scale(0.97); }
 .mode-btn.strict {
   background: #dbeafe;
   color: #1d4ed8;
@@ -111,21 +124,35 @@ header h1 {
   gap: 8px;
 }
 .actions button {
-  flex: 1;
   border: none;
   border-radius: 8px;
   padding: 7px;
   font-size: 12px;
   font-weight: 600;
   cursor: pointer;
+  transition: filter 0.15s, transform 0.1s;
 }
+.actions button:hover  { filter: brightness(0.92); transform: scale(1.03); }
+.actions button:active { filter: brightness(0.82); transform: scale(0.97); }
 .panic-btn {
   background: #fee2e2;
   color: #991b1b;
+  flex: 0 0 60%;
 }
 .options-btn {
   background: #e5e7eb;
   color: #374151;
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+}
+
+.options-btn span {
+  font-size: 200%;
+  line-height: 0;
+  margin-top: -2px;
 }
 footer .mode-desc {
   font-size: 11px;
