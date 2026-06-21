@@ -278,3 +278,14 @@ footer a:hover {
 footer a svg {
   display: block;
 }
+
+/* Stats + Reset row */
+
+.stats-reset-row {
+  display: flex;
+  gap: 16px;
+}
+
+.stats-reset-row .section {
+  flex: 1;
+}

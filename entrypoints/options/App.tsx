@@ -275,22 +275,23 @@ function App() {
         </table>
       </section>
 
-      {/* Stats */}
-      <section className="section stats-section">
-        <h2>Statistics</h2>
-        <div className="stat-row">
-          <span>Total items scrubbed (all sessions)</span>
-          <strong>{settings.scrubCount}</strong>
-        </div>
-      </section>
+      {/* Stats + Reset — same row */}
+      <div className="stats-reset-row">
+        <section className="section stats-section">
+          <h2>Statistics</h2>
+          <div className="stat-row">
+            <span>Total items scrubbed (all sessions)</span>
+            <strong>{settings.scrubCount}</strong>
+          </div>
+        </section>
 
-      {/* Reset */}
-      <section className="section">
-        <h2>Reset</h2>
-        <button className="reset-btn" onClick={resetAll}>
-          Reset all settings to defaults
-        </button>
-      </section>
+        <section className="section">
+          <h2>Reset</h2>
+          <button className="reset-btn" onClick={resetAll}>
+            Reset all settings to defaults
+          </button>
+        </section>
+      </div>
 
       <footer>
         <span>PII Airlock — open source, no data leaves your browser.</span>
