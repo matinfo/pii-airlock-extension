@@ -89,13 +89,22 @@ header h1 {
   border: none;
   border-radius: 20px;
   padding: 5px 14px;
+  min-height: 26px;
   font-size: 12px;
   font-weight: 700;
   cursor: pointer;
-  transition: filter 0.15s, transform 0.1s;
+  transition:
+    filter 0.15s,
+    transform 0.1s;
 }
-.mode-btn:hover  { filter: brightness(0.92); transform: scale(1.04); }
-.mode-btn:active { filter: brightness(0.85); transform: scale(0.97); }
+.mode-btn:hover {
+  filter: brightness(0.92);
+  transform: scale(1.04);
+}
+.mode-btn:active {
+  filter: brightness(0.85);
+  transform: scale(0.97);
+}
 .mode-btn.strict {
   background: #dbeafe;
   color: #1d4ed8;
@@ -130,10 +139,18 @@ header h1 {
   font-size: 12px;
   font-weight: 600;
   cursor: pointer;
-  transition: filter 0.15s, transform 0.1s;
+  transition:
+    filter 0.15s,
+    transform 0.1s;
 }
-.actions button:hover  { filter: brightness(0.92); transform: scale(1.03); }
-.actions button:active { filter: brightness(0.82); transform: scale(0.97); }
+.actions button:hover {
+  filter: brightness(0.92);
+  transform: scale(1.03);
+}
+.actions button:active {
+  filter: brightness(0.82);
+  transform: scale(0.97);
+}
 .panic-btn {
   background: #fee2e2;
   color: #991b1b;

@@ -1,23 +1,27 @@
-import { useState, useEffect } from 'react';
-import logo from '~/assets/pii-airlock-logo.png';
-import './App.css';
+import { useState, useEffect } from "react";
+import logo from "~/assets/pii-airlock-logo.png";
+import "./App.css";
 
-type Mode = 'strict' | 'permissive';
+type Mode = "strict" | "permissive";
 
 const AI_SITES = [
-  'chatgpt.com', 'claude.ai', 'gemini.google.com',
-  'copilot.microsoft.com', 'perplexity.ai', 'poe.com',
+  "chatgpt.com",
+  "claude.ai",
+  "gemini.google.com",
+  "copilot.microsoft.com",
+  "perplexity.ai",
+  "poe.com",
 ];
 
 function App() {
-  const [mode, setMode] = useState<Mode>('strict');
+  const [mode, setMode] = useState<Mode>("strict");
   const [scrubCount, setScrubCount] = useState(0);
   const [currentSite, setCurrentSite] = useState<string | null>(null);
   const [active, setActive] = useState(true);
 
   useEffect(() => {
     // Load settings
-    browser.storage.sync.get({ mode: 'strict', scrubCount: 0 }).then((s) => {
+    browser.storage.sync.get({ mode: "strict", scrubCount: 0 }).then((s) => {
       setMode(s.mode as Mode);
       setScrubCount(s.scrubCount as number);
     });
@@ -29,13 +33,15 @@ function App() {
           const host = new URL(tab.url).hostname;
           const matched = AI_SITES.find((s) => host.includes(s));
           setCurrentSite(matched ?? null);
-        } catch { /* ignore */ }
+        } catch {
+          /* ignore */
+        }
       }
     });
   }, []);
 
   const toggleMode = () => {
-    const next: Mode = mode === 'strict' ? 'permissive' : 'strict';
+    const next: Mode = mode === "strict" ? "permissive" : "strict";
     setMode(next);
     browser.storage.sync.set({ mode: next });
   };
@@ -46,7 +52,10 @@ function App() {
     // Notify content scripts to clear in-memory mappings
     browser.tabs.query({}).then((tabs) => {
       tabs.forEach((tab) => {
-        if (tab.id) browser.tabs.sendMessage(tab.id, { type: 'PANIC_CLEAR' }).catch(() => {});
+        if (tab.id)
+          browser.tabs
+            .sendMessage(tab.id, { type: "PANIC_CLEAR" })
+            .catch(() => {});
       });
     });
   };
@@ -57,22 +66,27 @@ function App() {
         <img src={logo} alt="PII Airlock" className="logo" />
       </header>
 
-      <div className={`protection-status ${active ? 'on' : 'off'}`}>
+      <div className={`protection-status ${active ? "on" : "off"}`}>
         <span className="status-dot" />
-        <span className="status-label">{active ? 'Protection active' : 'Protection paused'}</span>
+        <span className="status-label">
+          {active ? "Protection active" : "Protection paused"}
+        </span>
       </div>
 
       <div className="site-status">
-        {currentSite
-          ? <span className="site-on">✅ Active on <strong>{currentSite}</strong></span>
-          : <span className="site-off">⚠️ Not an AI chat site</span>
-        }
+        {currentSite ? (
+          <span className="site-on">
+            ✅ Active on <strong>{currentSite}</strong>
+          </span>
+        ) : (
+          <span className="site-off">⚠️ Not an AI chat site</span>
+        )}
       </div>
 
       <div className="mode-row">
         <span>Mode</span>
         <button className={`mode-btn ${mode}`} onClick={toggleMode}>
-          {mode === 'strict' ? '🛡 Strict' : '🔔 Permissive'}
+          {mode === "strict" ? "🛡 Strict" : "🔔 Permissive"}
         </button>
       </div>
 
@@ -82,19 +96,26 @@ function App() {
       </div>
 
       <div className="actions">
-        <button className="panic-btn" onClick={panicClear} title="Clear all in-memory mappings">
+        <button
+          className="panic-btn"
+          onClick={panicClear}
+          title="Clear all in-memory mappings"
+        >
           🗑 Clear mappings
         </button>
-        <button className="options-btn" onClick={() => browser.runtime.openOptionsPage()}>
-          ⚙ Options
+        <button
+          className="options-btn"
+          onClick={() => browser.runtime.openOptionsPage()}
+        >
+          <span>⚙</span> Options
         </button>
       </div>
 
       <footer>
         <span className="mode-desc">
-          {mode === 'strict'
-            ? 'Strict: blocks high-risk PII, auto-scrubs names.'
-            : 'Permissive: warns on high-risk, allows names.'}
+          {mode === "strict"
+            ? "Strict: blocks high-risk PII, auto-scrubs names."
+            : "Permissive: warns on high-risk, allows names."}
         </span>
       </footer>
     </div>
