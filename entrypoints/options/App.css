@@ -267,8 +267,14 @@ footer {
 footer a {
   color: #4299e1;
   text-decoration: none;
+  display: inline-flex;
+  align-items: center;
 }
 
 footer a:hover {
-  text-decoration: underline;
+  color: #1a202c;
+}
+
+footer a svg {
+  display: block;
 }
