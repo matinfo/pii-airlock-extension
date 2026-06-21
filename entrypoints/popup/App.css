@@ -2,7 +2,7 @@
 body { font-family: system-ui, -apple-system, sans-serif; background: #f9fafb; }
 .popup { width: 280px; padding: 16px; display: flex; flex-direction: column; gap: 12px; }
 header { display: flex; align-items: center; gap: 8px; }
-header .logo { width: 32px; height: 32px; object-fit: contain; }
+header .logo { width: 220px; height: auto; object-fit: contain; flex: 1; }
 header h1 { font-size: 16px; font-weight: 700; color: #1f2937; flex: 1; }
 .status-dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; }
 .status-dot.on  { background: #22c55e; }

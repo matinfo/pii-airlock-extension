@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import logo from '/icon/128.png';
+import logo from '~/assets/pii-airlock-logo.png';
 import './App.css';
 
 type Mode = 'strict' | 'permissive';
@@ -55,7 +55,6 @@ function App() {
     <div className="popup">
       <header>
         <img src={logo} alt="PII Airlock" className="logo" />
-        <h1>PII Airlock</h1>
         <span className={`status-dot ${active ? 'on' : 'off'}`} title={active ? 'Active' : 'Paused'} />
       </header>
 
