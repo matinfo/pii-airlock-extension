@@ -1,6 +1,7 @@
 /** Adapter for character.ai (character.ai/chat/). */
 
 import type { ChatAdapter } from './types';
+import { replaceContentEditable } from './dom';
 
 export const characterAdapter: ChatAdapter = {
   name: 'character.ai',
@@ -37,10 +38,11 @@ export const characterAdapter: ChatAdapter = {
         HTMLTextAreaElement.prototype, 'value',
       )?.set;
       nativeSetter?.call(composer, text);
+      composer.dispatchEvent(new Event('input', { bubbles: true }));
     } else {
-      composer.innerText = text;
+      // contenteditable: route through the editor so it commits. See dom.ts.
+      replaceContentEditable(composer, text);
     }
-    composer.dispatchEvent(new Event('input', { bubbles: true }));
   },
 
   triggerSend(composer: HTMLElement): void {

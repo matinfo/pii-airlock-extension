@@ -1,6 +1,7 @@
 /** Adapter for perplexity.ai. */
 
 import type { ChatAdapter } from './types';
+import { replaceContentEditable } from './dom';
 
 export const perplexityAdapter: ChatAdapter = {
   name: 'perplexity',
@@ -35,8 +36,8 @@ export const perplexityAdapter: ChatAdapter = {
       setter?.call(composer, text);
       composer.dispatchEvent(new Event('input', { bubbles: true }));
     } else {
-      composer.innerText = text;
-      composer.dispatchEvent(new Event('input', { bubbles: true }));
+      // contenteditable: route through the editor so it commits. See dom.ts.
+      replaceContentEditable(composer, text);
     }
   },
 

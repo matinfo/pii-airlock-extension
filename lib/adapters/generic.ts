@@ -1,6 +1,7 @@
 /** Generic heuristic adapter — works on any site with a chat-like composer. */
 
 import type { ChatAdapter } from './types';
+import { replaceContentEditable } from './dom';
 
 /** Score a candidate composer element 0–6. ≥ 4 = treat as chat composer. */
 function scoreComposer(el: Element): number {
@@ -85,16 +86,8 @@ export const genericAdapter: ChatAdapter = {
       nativeInputValueSetter?.call(composer, text);
       composer.dispatchEvent(new Event('input', { bubbles: true }));
     } else {
-      // contenteditable
-      composer.innerText = text;
-      composer.dispatchEvent(new Event('input', { bubbles: true }));
-      // Place cursor at end
-      const range = document.createRange();
-      const sel = window.getSelection();
-      range.selectNodeContents(composer);
-      range.collapse(false);
-      sel?.removeAllRanges();
-      sel?.addRange(range);
+      // contenteditable: route through the editor so it commits. See dom.ts.
+      replaceContentEditable(composer, text);
     }
   },
 

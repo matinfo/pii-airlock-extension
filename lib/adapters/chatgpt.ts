@@ -1,6 +1,7 @@
 /** Adapter for chatgpt.com and chat.openai.com. */
 
 import type { ChatAdapter } from './types';
+import { replaceContentEditable } from './dom';
 
 export const chatgptAdapter: ChatAdapter = {
   name: 'chatgpt',
@@ -27,9 +28,9 @@ export const chatgptAdapter: ChatAdapter = {
   },
 
   setText(composer: HTMLElement, text: string): void {
-    // ChatGPT uses ProseMirror — set innerHTML via paragraph structure
-    composer.innerHTML = `<p>${text.replace(/\n/g, '</p><p>')}</p>`;
-    composer.dispatchEvent(new Event('input', { bubbles: true }));
+    // ChatGPT uses ProseMirror — innerHTML mutation does not commit to its
+    // internal state and leaks the original text on send. See dom.ts.
+    replaceContentEditable(composer, text);
   },
 
   triggerSend(): void {
