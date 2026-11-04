@@ -23,7 +23,7 @@ export default defineConfig({
   manifest: {
     name: 'PII Airlock',
     description: 'Automatically detects and scrubs PII from AI chat inputs before you send',
-    permissions: ['storage', 'tabs'],
+    permissions: ['storage'],
     host_permissions: [
       'https://chatgpt.com/*',
       'https://chat.openai.com/*',

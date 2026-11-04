@@ -1,41 +1,34 @@
 import { useState, useEffect } from "react";
 import logo from "~/assets/pii-airlock-logo.png";
+import { MSG } from "~/lib/messages";
 import "./App.css";
 
 type Mode = "strict" | "permissive";
 
-const AI_SITES = [
-  "chatgpt.com",
-  "claude.ai",
-  "gemini.google.com",
-  "copilot.microsoft.com",
-  "perplexity.ai",
-  "poe.com",
-];
+interface TabStatus {
+  site: string;
+  composerFound: boolean;
+}
 
 function App() {
   const [mode, setMode] = useState<Mode>("strict");
   const [scrubCount, setScrubCount] = useState(0);
-  const [currentSite, setCurrentSite] = useState<string | null>(null);
-  const [active, setActive] = useState(true);
+  // null = no PII Airlock content script on this tab (not a supported site).
+  const [tabStatus, setTabStatus] = useState<TabStatus | null>(null);
 
   useEffect(() => {
-    // Load settings
-    browser.storage.sync.get({ mode: "strict", scrubCount: 0 }).then((s) => {
-      setMode(s.mode as Mode);
-      setScrubCount(s.scrubCount as number);
-    });
+    browser.storage.sync.get({ mode: "strict" }).then((s) => setMode(s.mode as Mode));
+    browser.storage.local.get({ scrubCount: 0 }).then((s) => setScrubCount(s.scrubCount as number));
 
-    // Get current tab hostname
-    browser.tabs.query({ active: true, currentWindow: true }).then(([tab]) => {
-      if (tab?.url) {
-        try {
-          const host = new URL(tab.url).hostname;
-          const matched = AI_SITES.find((s) => host.includes(s));
-          setCurrentSite(matched ?? null);
-        } catch {
-          /* ignore */
-        }
+    // Ask the tab's content script directly. No `tabs` permission needed, and
+    // the answer is real: "composer found", not "hostname looks familiar".
+    browser.tabs.query({ active: true, currentWindow: true }).then(async ([tab]) => {
+      if (tab?.id === undefined) return;
+      try {
+        const res = (await browser.tabs.sendMessage(tab.id, { type: MSG.STATUS })) as TabStatus | undefined;
+        setTabStatus(res ?? null);
+      } catch {
+        setTabStatus(null); // no content script here
       }
     });
   }, []);
@@ -48,13 +41,13 @@ function App() {
 
   const panicClear = () => {
     setScrubCount(0);
-    browser.storage.sync.set({ scrubCount: 0 });
+    browser.storage.local.set({ scrubCount: 0 });
     // Notify content scripts to clear in-memory mappings
     browser.tabs.query({}).then((tabs) => {
       tabs.forEach((tab) => {
         if (tab.id)
           browser.tabs
-            .sendMessage(tab.id, { type: "PANIC_CLEAR" })
+            .sendMessage(tab.id, { type: MSG.PANIC_CLEAR })
             .catch(() => {});
       });
     });
@@ -66,20 +59,28 @@ function App() {
         <img src={logo} alt="PII Airlock" className="logo" />
       </header>
 
-      <div className={`protection-status ${active ? "on" : "off"}`}>
+      <div className={`protection-status ${tabStatus?.composerFound ? "on" : "off"}`}>
         <span className="status-dot" />
         <span className="status-label">
-          {active ? "Protection active" : "Protection paused"}
+          {tabStatus === null
+            ? "Not an AI chat site"
+            : tabStatus.composerFound
+              ? "Protection active"
+              : "Not protected here"}
         </span>
       </div>
 
       <div className="site-status">
-        {currentSite ? (
+        {tabStatus === null ? (
+          <span className="site-off">Open a supported AI chat to use PII Airlock.</span>
+        ) : tabStatus.composerFound ? (
           <span className="site-on">
-            ✅ Active on <strong>{currentSite}</strong>
+            ✅ Chat box found (<strong>{tabStatus.site}</strong>)
           </span>
         ) : (
-          <span className="site-off">⚠️ Not an AI chat site</span>
+          <span className="site-off">
+            ⚠️ No chat box found. The site may have changed; messages here are not checked.
+          </span>
         )}
       </div>
 
@@ -91,7 +92,7 @@ function App() {
       </div>
 
       <div className="stats">
-        <span className="stat-label">Items scrubbed (session)</span>
+        <span className="stat-label">Items scrubbed (total)</span>
         <span className="stat-value">{scrubCount}</span>
       </div>
 
@@ -114,8 +115,8 @@ function App() {
       <footer>
         <span className="mode-desc">
           {mode === "strict"
-            ? "Strict: blocks high-risk PII, auto-scrubs names."
-            : "Permissive: warns on high-risk, allows names."}
+            ? "Strict: high-risk PII needs your decision, names are scrubbed."
+            : "Permissive: high-risk PII is scrubbed, names ask first."}
         </span>
       </footer>
     </div>

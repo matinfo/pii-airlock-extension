@@ -1,3 +1,4 @@
+declare const chrome: { storage: { sync: { set(v: unknown): Promise<void> } } };
 import { test as base, chromium, type BrowserContext, type Page } from '@playwright/test';
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
@@ -10,6 +11,7 @@ const SITE = 'https://chatgpt.com';
 
 const PAGE = `<!doctype html><html><body>
 <div id="editor"></div>
+<textarea id="edit" placeholder="edit message"></textarea>
 <button id="send" data-testid="send-button" aria-label="Send prompt">Send</button>
 <script src="/pm-app.js"></script>
 </body></html>`;
@@ -19,6 +21,8 @@ export interface Harness {
   page: Page;
   /** Raw bodies the fake backend received. */
   sent: string[];
+  /** Write extension settings (as the options page would). */
+  setSettings(s: Record<string, unknown>): Promise<void>;
 }
 
 export const test = base.extend<{ h: Harness }>({
@@ -52,7 +56,13 @@ export const test = base.extend<{ h: Harness }>({
     await page.waitForSelector('#prompt-textarea');
     // content script runs at document_idle; give interceptor time to attach
     await page.waitForTimeout(1500);
-    await use({ context, page, sent });
+    const setSettings = async (s: Record<string, unknown>) => {
+      let [sw] = context.serviceWorkers();
+      sw ??= await context.waitForEvent('serviceworker');
+      await sw.evaluate((v) => chrome.storage.sync.set(v), s);
+      await page.waitForTimeout(300);
+    };
+    await use({ context, page, sent, setSettings });
     await context.close();
   },
 });

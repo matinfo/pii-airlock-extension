@@ -24,21 +24,38 @@ async function send(view: EditorView) {
   view.updateState(EditorState.create({ schema, plugins: view.state.plugins }));
 }
 
-const mount = document.getElementById('editor')!;
-const view: EditorView = new EditorView(mount, {
-  state: EditorState.create({
-    schema,
-    plugins: [
-      keymap({
-        Enter: () => { void send(view); return true; },
-        'Mod-Enter': () => { void send(view); return true; },
-      }),
-      keymap(baseKeymap),
-    ],
-  }),
-  attributes: { id: 'prompt-textarea' },
-});
+function makeView(): EditorView {
+  const mount = document.getElementById('editor')!;
+  mount.innerHTML = '';
+  const v: EditorView = new EditorView(mount, {
+    state: EditorState.create({
+      schema,
+      plugins: [
+        keymap({
+          Enter: () => { void send(v); return true; },
+          'Mod-Enter': () => { void send(v); return true; },
+        }),
+        keymap(baseKeymap),
+      ],
+    }),
+    attributes: { id: 'prompt-textarea' },
+  });
+  return v;
+}
+
+let view = makeView();
 document.getElementById('send')!.addEventListener('click', () => void send(view));
 
+// An "edit previous message" box: separate editable, own Enter-to-send handler.
+const edit = document.getElementById('edit') as HTMLTextAreaElement;
+edit.addEventListener('keydown', (e) => {
+  if (e.key === 'Enter' && !e.shiftKey) {
+    e.preventDefault();
+    void fetch('/api/send', { method: 'POST', body: edit.value });
+  }
+});
+
 // Test hooks
-(window as unknown as { __pm: EditorView }).__pm = view;
+const w = window as unknown as { __remount: () => void };
+// SPA remount: the whole composer is replaced (as on route change / re-render).
+w.__remount = () => { view.destroy(); view = makeView(); };

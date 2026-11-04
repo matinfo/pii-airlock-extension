@@ -4,6 +4,7 @@ import {
   type NerDetectResponse,
 } from '../lib/detection/ner-messages';
 import type { Detection } from '../lib/detection/types';
+import { MSG } from '../lib/messages';
 
 /**
  * Minimal typing for the MV3 offscreen APIs (not in webextension-polyfill).
@@ -79,12 +80,45 @@ async function detectInBackground(text: string, lang: string): Promise<Detection
 }
 
 export default defineBackground(() => {
-  browser.runtime.onInstalled.addListener(() => {
-    browser.storage.sync.set({ mode: 'strict', overrides: {}, scrubCount: 0 });
+  // Defaults on FRESH INSTALL only, and never over existing values. 'update'
+  // (extension or browser) must not reset the user's settings.
+  browser.runtime.onInstalled.addListener(async ({ reason }) => {
+    if (reason !== 'install') return;
+    const existing = await browser.storage.sync.get(['mode', 'overrides']);
+    await browser.storage.sync.set({
+      mode: existing.mode ?? 'strict',
+      overrides: existing.overrides ?? {},
+    });
   });
 
-  browser.tabs.onRemoved.addListener((_tabId) => {
-    // No persistent per-tab state — mappings are in-memory in the content script.
+  // Counter lives in storage.local and is updated here, in one place, so
+  // concurrent tabs can't lose increments (the old get+set ran in each tab).
+  let counterQueue: Promise<void> = Promise.resolve();
+  const addToCounter = (n: number) => {
+    counterQueue = counterQueue.then(async () => {
+      const { scrubCount = 0 } = await browser.storage.local.get('scrubCount');
+      await browser.storage.local.set({ scrubCount: (scrubCount as number) + n });
+    }).catch(() => {});
+  };
+
+  browser.runtime.onMessage.addListener((msg, sender) => {
+    const m = msg as { type?: string; count?: number; ok?: boolean };
+    if (m?.type === MSG.SCRUBBED && typeof m.count === 'number') {
+      addToCounter(m.count);
+    } else if (m?.type === MSG.HEALTH && sender.tab?.id !== undefined) {
+      const tabId = sender.tab.id;
+      void browser.action.setBadgeText({ tabId, text: m.ok ? '' : '!' });
+      if (!m.ok) {
+        void browser.action.setBadgeBackgroundColor({ tabId, color: '#d97706' });
+        void browser.action.setTitle({
+          tabId,
+          title: 'PII Airlock: no chat box found on this page. NOT protected here.',
+        });
+      } else {
+        void browser.action.setTitle({ tabId, title: 'PII Airlock' });
+      }
+    }
+    return false;
   });
 
   // Layer 3 NER dispatch from content scripts. Always fail-open to [].

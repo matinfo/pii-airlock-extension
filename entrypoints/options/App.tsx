@@ -128,14 +128,26 @@ function App() {
 
   useEffect(() => {
     browser.storage.sync
-      .get(DEFAULT_SETTINGS as unknown as Record<string, unknown>)
-      .then((s) => setSettings(s as unknown as Settings));
+      .get({ mode: DEFAULT_SETTINGS.mode, overrides: DEFAULT_SETTINGS.overrides })
+      .then((s) => setSettings((prev) => ({ ...prev, ...(s as unknown as Settings) })));
+    // Counter lives in storage.local, owned by the background. Read-only here:
+    // saving settings must never write a stale copy back.
+    browser.storage.local.get({ scrubCount: 0 }).then((s) =>
+      setSettings((prev) => ({ ...prev, scrubCount: s.scrubCount as number })),
+    );
+    const onChange = (changes: Record<string, { newValue?: unknown }>, area: string) => {
+      if (area === 'local' && changes.scrubCount) {
+        setSettings((prev) => ({ ...prev, scrubCount: changes.scrubCount!.newValue as number }));
+      }
+    };
+    browser.storage.onChanged.addListener(onChange);
+    return () => browser.storage.onChanged.removeListener(onChange);
   }, []);
 
   function save(next: Settings) {
     setSettings(next);
     browser.storage.sync
-      .set(next as unknown as Record<string, unknown>)
+      .set({ mode: next.mode, overrides: next.overrides })
       .then(() => {
         setSaved(true);
         setTimeout(() => setSaved(false), 2000);
