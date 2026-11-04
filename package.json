@@ -7,24 +7,33 @@
   "scripts": {
     "dev": "wxt",
     "dev:firefox": "wxt -b firefox",
+    "dev:edge": "wxt -b edge",
     "build": "wxt build",
     "build:firefox": "wxt build -b firefox",
+    "build:edge": "wxt build -b edge",
+    "build:all": "wxt build && wxt build -b firefox && wxt build -b edge",
     "zip": "wxt zip",
     "zip:firefox": "wxt zip -b firefox",
+    "zip:edge": "wxt zip -b edge",
+    "zip:all": "wxt zip && wxt zip -b firefox && wxt zip -b edge",
+    "fetch:ner": "bun run scripts/fetch-ner-assets.ts",
     "compile": "tsc --noEmit",
     "test": "bun test tests/",
     "postinstall": "wxt prepare"
   },
   "dependencies": {
+    "@huggingface/transformers": "^4.2.0",
     "compromise": "^14.15.1",
     "franc-min": "^6.2.0",
     "react": "^19.2.4",
     "react-dom": "^19.2.4"
   },
   "devDependencies": {
+    "@happy-dom/global-registrator": "^20.10.6",
     "@types/react": "^19.2.14",
     "@types/react-dom": "^19.2.3",
     "@wxt-dev/module-react": "^1.1.5",
+    "happy-dom": "^20.10.6",
     "typescript": "^5.9.3",
     "wxt": "^0.20.26"
   }

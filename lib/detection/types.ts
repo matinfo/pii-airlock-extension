@@ -7,7 +7,7 @@ export interface Detection {
   end: number;          // exclusive char offset
   score: number;        // 0–1 confidence
   value: string;        // the matched text slice
-  source: 'regex' | 'nlp';
+  source: 'regex' | 'nlp' | 'ner';
 }
 
 /** Risk classification of a detected entity. */

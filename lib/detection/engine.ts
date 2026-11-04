@@ -9,6 +9,7 @@
 import type { Detection, DetectionResult } from './types';
 import { detectRegex } from './regex';
 import { detectNlp } from './nlp';
+import { detectNerRemote } from './ner-client';
 import { detectLanguage } from './lang';
 import { getDecision, tierOf } from '../policy';
 
@@ -46,7 +47,7 @@ function dedupeOverlaps(detections: Detection[]): Detection[] {
  */
 export async function analyze(
   text: string,
-  options: { skipNlp?: boolean } = {},
+  options: { skipNlp?: boolean; skipNer?: boolean } = {},
 ): Promise<DetectionResult> {
   try {
     const lang = detectLanguage(text);
@@ -54,10 +55,16 @@ export async function analyze(
     // Layer 1: regex (sync) — locale-aware phone patterns require lang
     const regexHits = detectRegex(text, lang);
 
-    // Layer 2: NLP (async, English only)
-    const nlpHits = options.skipNlp ? [] : await detectNlp(text, lang);
+    // Layers 2 + 3 run concurrently; both fail-open to [].
+    // Layer 2: compromise (instant, lexicon-based fallback).
+    // Layer 3: transformer NER (heavy, multilingual, catches novel surnames +
+    // non-English given names). Higher NER scores win the overlap dedupe.
+    const [nlpHits, nerHits] = await Promise.all([
+      options.skipNlp ? Promise.resolve([]) : detectNlp(text, lang),
+      options.skipNer ? Promise.resolve([]) : detectNerRemote(text, lang),
+    ]);
 
-    const all = dedupeOverlaps([...regexHits, ...nlpHits]);
+    const all = dedupeOverlaps([...regexHits, ...nlpHits, ...nerHits]);
     const topTier = all.length > 0
       ? (all.map((d) => tierOf(d.entityType)).sort((a, b) =>
           tierRank(a) - tierRank(b),

@@ -12,8 +12,21 @@ import { detectNlp } from '../../lib/detection/nlp';
 // ── Language guard ────────────────────────────────────────────────────────────
 
 describe('detectNlp: language guard', () => {
-  it('returns [] for non-English text', async () => {
-    const r = await detectNlp('Bonjour, je suis Jean Dupont.', 'fr');
+  it('detects names in Latin-script non-English text (fr)', async () => {
+    // Regression: French names were silently skipped, leaking PII.
+    // compromise tags proper nouns by capitalisation, so it works cross-language.
+    const r = await detectNlp('Mathieu Meylan va à la plage', 'fr');
+    expect(r.some((d) => d.value.includes('Mathieu'))).toBe(true);
+  });
+
+  it('rejects lowercase common-word mis-tags as noise', async () => {
+    // The French verb "va" must NOT be returned as a place.
+    const r = await detectNlp('Mathieu Meylan va à la plage', 'fr');
+    expect(r.some((d) => d.value === 'va')).toBe(false);
+  });
+
+  it('returns [] for non-Latin scripts (compromise cannot tokenise)', async () => {
+    const r = await detectNlp('Иван Петров', 'ru');
     expect(r).toHaveLength(0);
   });
 
