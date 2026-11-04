@@ -1,30 +1,31 @@
 /**
- * Layer 1 — Regex-based structured PII detection.
+ * Layer 1: rule-table detection of structured PII and secrets.
  *
- * Covers entities that have well-defined machine-readable formats.
- * Runs synchronously in ~0ms. Never makes network calls.
+ * Synchronous, no network, always on. Every rule is a pattern plus an optional
+ * validator (checksum / shape) and an optional context veto, so ordinary text
+ * ("version 1.2.3.4", "12:30:45", "secret santa", a 10-digit order number) does
+ * not trigger it. Rules mirror pii_scrub/recognizers.py; keep the two in step.
  *
- * Entity types returned are intentionally compatible with the pii-airlock
- * Python token format so mappings can be shared when the optional enhanced
- * mode is active.
- *
- * The `lang` parameter enables locale-specific phone number patterns that
- * cover local (non-international) formats. The universal phone pattern
- * already handles +XX country-code prefixed numbers for all locales.
+ * Phones go through libphonenumber-js (real numbering plans) instead of
+ * routing a regex by detected language, which missed any phone number written
+ * inside a sentence of another language.
  */
 
+import { findPhoneNumbersInText, type CountryCode } from 'libphonenumber-js/max';
 import type { Detection } from './types';
 
 // ---------------------------------------------------------------------------
-// Helpers
+// Validators
 // ---------------------------------------------------------------------------
 
+const digitsOf = (s: string) => s.replace(/\D/g, '');
+
 function luhn(num: string): boolean {
-  const digits = num.replace(/\D/g, '');
+  const digits = digitsOf(num);
   let sum = 0;
   let alt = false;
   for (let i = digits.length - 1; i >= 0; i--) {
-    let d = parseInt(digits[i], 10);
+    let d = digits.charCodeAt(i) - 48;
     if (alt) {
       d *= 2;
       if (d > 9) d -= 9;
@@ -35,179 +36,372 @@ function luhn(num: string): boolean {
   return sum % 10 === 0;
 }
 
-function findAll(
-  text: string,
-  pattern: RegExp,
-  entityType: string,
-  validate?: (match: string) => boolean,
-): Detection[] {
-  const results: Detection[] = [];
-  pattern.lastIndex = 0;
-  let m: RegExpExecArray | null;
-  while ((m = pattern.exec(text)) !== null) {
-    const value = m[0];
-    if (validate && !validate(value)) continue;
-    results.push({
-      entityType,
-      start: m.index,
-      end: m.index + value.length,
-      score: 0.95,
-      value,
-      source: 'regex',
-    });
+/** ISO 13616: move first 4 chars to the end, letters → 10..35, mod 97 == 1. */
+function validIban(match: string): boolean {
+  const raw = match.replace(/\s/g, '').toUpperCase();
+  if (raw.length < 15 || raw.length > 34) return false;
+  const moved = raw.slice(4) + raw.slice(0, 4);
+  let rem = 0;
+  for (const ch of moved) {
+    const v = /\d/.test(ch) ? ch : String(ch.charCodeAt(0) - 55);
+    for (const c of v) rem = (rem * 10 + (c.charCodeAt(0) - 48)) % 97;
   }
-  return results;
+  return rem === 1;
+}
+
+/** Swiss AHV/AVS (756.xxxx.xxxx.xx): EAN-13 check digit. */
+function validAhv(match: string): boolean {
+  const d = digitsOf(match);
+  if (d.length !== 13) return false;
+  let total = 0;
+  for (let i = 0; i < 12; i++) total += (d.charCodeAt(i) - 48) * (i % 2 ? 3 : 1);
+  return (10 - (total % 10)) % 10 === d.charCodeAt(12) - 48;
+}
+
+/** French NIR: 13 chars + 2-digit key = 97 - (n mod 97). Corsica 2A/2B → 19/18. */
+function validNir(match: string): boolean {
+  const raw = match.replace(/\s/g, '').toUpperCase();
+  let body = raw.slice(0, 13);
+  const key = raw.slice(13);
+  if (body.slice(5, 7) === '2A') body = body.replace('2A', '19');
+  else if (body.slice(5, 7) === '2B') body = body.replace('2B', '18');
+  if (!/^\d{13}$/.test(body)) return false;
+  return Number(key) === 97 - Number(BigInt(body) % 97n);
+}
+
+/** German Steuer-IdNr: 11 digits, ISO 7064 MOD 11,10. */
+function validSteuerId(match: string): boolean {
+  const d = digitsOf(match);
+  if (d.length !== 11 || d[0] === '0') return false;
+  let product = 10;
+  for (let i = 0; i < 10; i++) {
+    let sum = (d.charCodeAt(i) - 48 + product) % 10;
+    if (sum === 0) sum = 10;
+    product = (2 * sum) % 11;
+  }
+  const check = 11 - product;
+  return d.charCodeAt(10) - 48 === (check === 10 ? 0 : check);
+}
+
+const validLuhnDigits = (m: string) => luhn(digitsOf(m));
+
+function shannon(s: string): number {
+  const counts = new Map<string, number>();
+  for (const c of s) counts.set(c, (counts.get(c) ?? 0) + 1);
+  let h = 0;
+  for (const n of counts.values()) {
+    const p = n / s.length;
+    h -= p * Math.log2(p);
+  }
+  return h;
+}
+
+/** A value after `password=` etc. Reject placeholders and degenerate strings. */
+function plausibleSecretValue(v: string): boolean {
+  if (v.length < 8) return false;
+  if (/^(?:x+|\*+|\.+|-+|_+|<[^>]*>|\$\{[^}]*\}|\{\{[^}]*\}\}|your[_-].*|example.*|changeme|placeholder.*)$/i.test(v)) {
+    return false;
+  }
+  return shannon(v) >= 2.0;
+}
+
+function validIpv4(m: string): boolean {
+  const o = m.split('.').map(Number);
+  return o.length === 4 && o.every((n) => n >= 0 && n <= 255) && !o.every((n) => n === 0);
+}
+
+/** Real IPv6 grammar. Rejects times like 12:30:45 and "a::b" style identifiers. */
+function validIpv6(m: string): boolean {
+  if ((m.match(/::/g) ?? []).length > 1 || m.includes(':::')) return false;
+  const hexDigits = m.replace(/:/g, '');
+  if (hexDigits.length < 3 || !/^[0-9a-f]+$/i.test(hexDigits)) return false;
+  const groups = m.split(':');
+  const compressed = m.includes('::');
+  const nonEmpty = groups.filter((g) => g !== '');
+  if (nonEmpty.some((g) => g.length > 4)) return false;
+  if (compressed) return nonEmpty.length <= 7;
+  return groups.length === 8 && groups.every((g) => g.length >= 1);
+}
+
+function isPrivateIpv4(m: string): boolean {
+  const [a, b] = m.split('.').map(Number) as [number, number];
+  return (
+    a === 10 || a === 127 ||
+    (a === 172 && b >= 16 && b <= 31) ||
+    (a === 192 && b === 168) ||
+    (a === 169 && b === 254)
+  );
 }
 
 // ---------------------------------------------------------------------------
-// Universal patterns (language-independent)
+// Rule table
 // ---------------------------------------------------------------------------
 
-const RE_EMAIL = /\b[A-Za-z0-9._%+\-]+@[A-Za-z0-9.\-]+\.[A-Za-z]{2,}\b/g;
+interface Rule {
+  entity: string;
+  /** Needs the `g` and `d` flags when `group` > 0. */
+  re: RegExp;
+  score?: number;
+  validate?: (value: string) => boolean;
+  /** Return true to discard the hit (looks at surrounding text). */
+  veto?: (text: string, start: number, end: number) => boolean;
+  /** Capture group to report (0 = whole match). */
+  group?: number;
+  /** Override the entity type per hit (e.g. private vs public IP). */
+  classify?: (value: string) => string;
+}
 
-// International phone: +33 6 12 34 56 78, (555) 867-5309, +1 (800) 555-0100
-// Also catches US-format without country code.
-const RE_PHONE_INTL =
-  /(?<!\d)(\+?1[\s.\-]?)?(\(?\d{3}\)?[\s.\-]?\d{3}[\s.\-]?\d{4})(?!\d)|(\+\d{1,3}[\s.\-]?\(?\d+\)?(?:[\s.\-]?\d{2,}){2,})(?!\d)/g;
+const before = (text: string, start: number, n = 24) => text.slice(Math.max(0, start - n), start);
 
-const RE_CARD = /\b(?:\d[ \-]?){13,19}\b/g;
-const RE_IBAN = /\b[A-Z]{2}\d{2}[ A-Z0-9]{10,30}\b/g;
-const RE_SSN  = /\b\d{3}[- ]\d{2}[- ]\d{4}\b/g;
+const VERSION_CTX = /(?:\b(?:v|ver|version|release|build|rev|revision|python|node|java|go)\s*\.?\s*|\bv)$/i;
 
-const RE_IPV4 =
-  /\b(?:25[0-5]|2[0-4]\d|[01]?\d\d?)\.(?:25[0-5]|2[0-4]\d|[01]?\d\d?)\.(?:25[0-5]|2[0-4]\d|[01]?\d\d?)\.(?:25[0-5]|2[0-4]\d|[01]?\d\d?)\b/g;
-const RE_IPV6 = /\b(?:[0-9a-fA-F]{1,4}:){2,7}[0-9a-fA-F]{1,4}\b/g;
+const RULES: Rule[] = [
+  // --- contact ---------------------------------------------------------------
+  {
+    entity: 'EMAIL_ADDRESS',
+    re: /(?<![\w.+-])[\w.+-]+@[A-Za-z0-9-]+(?:\.[A-Za-z0-9-]+)*\.[A-Za-z]{2,}(?![\w-])/gd,
+    score: 0.95,
+  },
+  // International format in any language (+XX ...). libphonenumber also finds
+  // these when valid; this catches fictional/invalid-but-plausible numbers.
+  {
+    entity: 'PHONE_NUMBER',
+    re: /(?<![\w+])\+\d{1,3}(?:[ .\-]?\(?\d{1,4}\)?){2,5}(?![\w])/gd,
+    score: 0.7,
+    validate: (m) => digitsOf(m).length >= 8 && digitsOf(m).length <= 15,
+  },
+  // US/CA formatted numbers. Separators or parens are REQUIRED: a bare 10-digit
+  // run ("order number 1234567890") is not a phone number.
+  {
+    entity: 'PHONE_NUMBER',
+    re: /(?<![\w+])(?:\(\d{3}\)[ .\-]?\d{3}[ .\-]\d{4}|\d{3}[ .\-]\d{3}[ .\-]\d{4})(?![\w])/gd,
+    score: 0.75,
+  },
 
-const RE_BTC =
-  /\b(?:[13][a-km-zA-HJ-NP-Z1-9]{25,34}|bc1[a-z0-9]{39,59})\b/g;
-const RE_ETH = /\b0x[a-fA-F0-9]{40}\b/g;
+  // --- financial ---------------------------------------------------------------
+  {
+    entity: 'CREDIT_CARD',
+    re: /(?<![\w-])(?:\d[ -]?){12,18}\d(?![\w-])/gd,
+    score: 0.95,
+    validate: (m) => {
+      const d = digitsOf(m);
+      return d.length >= 13 && d.length <= 19 && luhn(d);
+    },
+  },
+  {
+    entity: 'IBAN_CODE',
+    re: /\b[A-Z]{2}\d{2}(?: ?[A-Z0-9]{4}){2,7}(?: ?[A-Z0-9]{1,3})?\b/gd,
+    score: 0.95,
+    validate: validIban,
+  },
+  { entity: 'SSN', re: /\b(?!000|666|9\d\d)\d{3}[- ](?!00)\d{2}[- ](?!0000)\d{4}\b/gd, score: 0.85 },
 
-// Secret keys / tokens — captures keyword + value so the whole secret is replaced
-const RE_SECRET =
-  /(?:^|[\s"'`=:])(?:(?:Bearer)\s+\S{8,}|(?:token|password|passwd|secret|api[_-]?key)[=:\s]+\S{4,}|sk-[A-Za-z0-9]{20,}|ghp_[A-Za-z0-9]{36}|ghs_[A-Za-z0-9]{36}|glpat-[A-Za-z0-9\-]{20,}|eyJ[A-Za-z0-9\-_]+\.[A-Za-z0-9\-_]+\.[A-Za-z0-9\-_]+)/gim;
+  // --- national identifiers ------------------------------------------------------
+  {
+    entity: 'FR_NIR',
+    re: /(?<![\w])[12378] ?\d{2} ?(?:0[1-9]|1[0-2]|[2-9]\d) ?(?:\d{2}|2[AB]) ?\d{3} ?\d{3} ?\d{2}(?![\w])/gid,
+    score: 0.95,
+    validate: validNir,
+  },
+  {
+    entity: 'CH_AHV',
+    re: /(?<![\w.])756[ .\-]?\d{4}[ .\-]?\d{4}[ .\-]?\d{2}(?![\w])/gd,
+    score: 0.95,
+    validate: validAhv,
+  },
+  {
+    entity: 'FR_SIRET',
+    re: /(?<![\w])\d{3} ?\d{3} ?\d{3} ?\d{5}(?![\w])/gd,
+    score: 0.85,
+    validate: validLuhnDigits,
+  },
+  {
+    entity: 'FR_SIREN',
+    re: /\bSIREN\b\W{0,5}(\d{3} ?\d{3} ?\d{3})(?![\w])/gid,
+    score: 0.85,
+    validate: validLuhnDigits,
+    group: 1,
+  },
+  {
+    entity: 'DE_TAX_ID',
+    re: /\b(?:Steuer-?ID|Steuer-?Identifikationsnummer|IdNr\.?)[^\d\n]{0,25}?(\d{2} ?\d{3} ?\d{3} ?\d{3})(?![\w])/gid,
+    score: 0.85,
+    validate: validSteuerId,
+    group: 1,
+  },
+  {
+    entity: 'DE_TAX_NUMBER',
+    re: /\bSteuernummer[^\d\n]{0,25}?(\d{2,3}\/\d{3}\/\d{4,5}|\d{10,13})(?![\w])/gid,
+    score: 0.85,
+    group: 1,
+  },
+  { entity: 'IT_VAT_CODE', re: /(?<![\w])IT ?\d{11}(?![\w])/gd, score: 0.95, validate: validLuhnDigits },
+  {
+    entity: 'IT_VAT_CODE',
+    re: /\b(?:Partita ?IVA|P\.? ?IVA)[^\d\n]{0,15}(\d{11})(?![\w])/gid,
+    score: 0.9,
+    validate: validLuhnDigits,
+    group: 1,
+  },
 
-const RE_DOB_LABEL =
-  /\b(?:dob|date of birth|born|birthday)[:\s]+(\d{1,2}[\/\-\.]\d{1,2}[\/\-\.]\d{2,4}|\d{4}[\/\-\.]\d{1,2}[\/\-\.]\d{1,2})\b/gi;
+  // --- network -----------------------------------------------------------------
+  {
+    entity: 'IP_ADDRESS',
+    re: /(?<![\w.])(?:\d{1,3}\.){3}\d{1,3}(?![\w]|\.\d)/gd,
+    score: 0.8,
+    validate: validIpv4,
+    veto: (text, start) => VERSION_CTX.test(before(text, start)),
+    classify: (v) => (isPrivateIpv4(v) ? 'IP_ADDRESS_PRIVATE' : 'IP_ADDRESS'),
+  },
+  {
+    entity: 'IP_ADDRESS',
+    re: /(?<![\w:.])(?:[0-9a-f]{0,4}:){2,7}[0-9a-f]{0,4}(?![\w:])/gid,
+    score: 0.8,
+    validate: validIpv6,
+  },
+
+  // --- crypto ------------------------------------------------------------------
+  { entity: 'CRYPTO', re: /\b(?:[13][a-km-zA-HJ-NP-Z1-9]{25,34}|bc1[a-z0-9]{39,59})\b/gd, score: 0.85 },
+  { entity: 'CRYPTO', re: /\b0x[a-fA-F0-9]{40}\b/gd, score: 0.9 },
+
+  // --- secrets (real formats first; generic assignment last) ----------------------
+  { entity: 'SECRET_KEY', re: /-----BEGIN [A-Z ]*PRIVATE KEY-----[\s\S]*?-----END [A-Z ]*PRIVATE KEY-----/gd, score: 1 },
+  { entity: 'SECRET_KEY', re: /\b(?:AKIA|ASIA)[0-9A-Z]{16}\b/gd, score: 1 },
+  { entity: 'SECRET_KEY', re: /\b(?:gh[pousr]_[A-Za-z0-9]{36,}|github_pat_\w{40,})/gd, score: 1 },
+  { entity: 'SECRET_KEY', re: /\bglpat-[A-Za-z0-9_\-]{20,}/gd, score: 1 },
+  { entity: 'SECRET_KEY', re: /\bxox[abprs]-[A-Za-z0-9-]{10,}/gd, score: 1 },
+  { entity: 'SECRET_KEY', re: /\bsk-(?:ant-|proj-)?[A-Za-z0-9_\-]{20,}/gd, score: 1 },
+  { entity: 'SECRET_KEY', re: /\bAIza[0-9A-Za-z_\-]{35}\b/gd, score: 1 },
+  { entity: 'SECRET_KEY', re: /\b[rs]k_(?:live|test)_[A-Za-z0-9]{20,}/gd, score: 1 },
+  { entity: 'SECRET_KEY', re: /\beyJ[\w-]{10,}\.eyJ[\w-]{10,}\.[\w-]{10,}/gd, score: 0.95 },
+  { entity: 'SECRET_KEY', re: /\bBearer\s+([A-Za-z0-9._~+/=-]{16,})/gd, score: 0.9, group: 1 },
+  // Password in a URL: scheme://user:PASSWORD@host
+  { entity: 'SECRET_KEY', re: /[a-z][a-z0-9+.\-]*:\/\/[^/\s:@]+:([^/\s@]{3,})@/gid, score: 0.97, group: 1 },
+  // key = value / key: value. Only the value is reported, only if plausible.
+  // "token limit" or "secret santa" have no assignment, so never match.
+  {
+    entity: 'SECRET_KEY',
+    re: /\b(?:password|passwd|pwd|secret|api[_-]?key|access[_-]?token|auth[_-]?token|client[_-]?secret|token)\b["']?\s*[:=]\s*["']?([^\s"'`,;]{8,})/gid,
+    score: 0.9,
+    group: 1,
+    validate: plausibleSecretValue,
+  },
+
+  // --- other ---------------------------------------------------------------------
+  {
+    entity: 'DATE_OF_BIRTH',
+    re: /\b(?:dob|date of birth|born|birthday|date de naissance|geburtsdatum|nato il)[:\s]+(\d{1,2}[/\-.]\d{1,2}[/\-.]\d{2,4}|\d{4}[/\-.]\d{1,2}[/\-.]\d{1,2})\b/gid,
+    score: 0.8,
+    group: 1,
+  },
+];
 
 // ---------------------------------------------------------------------------
-// Locale-specific phone patterns
-//
-// These cover local national formats that do NOT use a + country code prefix.
-// The universal RE_PHONE_INTL already catches international (+XX ...) forms
-// across all locales — these patterns are additive, not replacements.
+// Phones via libphonenumber-js
 // ---------------------------------------------------------------------------
 
-/**
- * Local phone number patterns keyed by BCP-47 language code.
- *
- * Each regex uses non-capturing groups for internal structure; the full match
- * is the PII span. All must have the `g` flag and no pre-existing `lastIndex`.
- */
-const LOCALE_PHONE: Record<string, RegExp> = {
-  // French: 10-digit numbers starting with 0, groups of 2
-  // Covers: 06 12 34 56 78 (mobile), 01 23 45 67 89 (landline)
-  fr: /(?<!\d)(0[1-9])(?:[\s.\-]?\d{2}){4}(?!\d)/g,
+const BASE_REGIONS: CountryCode[] = ['CH', 'FR', 'DE', 'GB', 'US', 'IT', 'ES'];
+const PHONE_WORDS =
+  /(?:tel|t[eé]l[eé]?phone|phone|call|mobile|cell|fax|whatsapp|natel|handy|telefon|rufnummer|appel|appelle|rappel|llama|chiama|telefono|portable|contact)\W{0,12}$/i;
 
-  // German: landlines (0XX/XXX) and mobiles (015x/016x/017x)
-  // Covers: 0176 12345678, 030 12345678
-  de: /(?<!\d)0(?:1[5-7]\d[\s\-]?\d{7}|\d{2,5}[\s\-\/]?\d{3,8})(?!\d)/g,
+/** Regions to try: the browser's own locales first, then a Western-Europe/US base. */
+function phoneRegions(): CountryCode[] {
+  const set = new Set<CountryCode>();
+  try {
+    for (const l of navigator.languages ?? [navigator.language]) {
+      const region = l.split('-')[1]?.toUpperCase();
+      if (region && /^[A-Z]{2}$/.test(region)) set.add(region as CountryCode);
+    }
+  } catch { /* no navigator */ }
+  for (const r of BASE_REGIONS) set.add(r);
+  return [...set];
+}
 
-  // UK: 11-digit numbers starting with 0 — covers mobiles (07xxx) and landlines
-  // Landlines: 0XX XXXX XXXX, 0XXX XXX XXXX, 0XXXX XXXXXX
-  gb: /(?<!\d)0(?:7\d{3}[\s\-]?\d{6}|\d{3,4}[\s\-]?\d{3,4}[\s\-]?\d{3,4})(?!\d)/g,
+const DATE_LIKE = /^(?:\d{4}[-./]\d{1,2}[-./]\d{1,2}|\d{1,2}[-./]\d{1,2}[-./]\d{2,4})$/;
+const DOTTED_QUAD = /^\d{1,3}(?:\.\d{1,3}){3}$/;
 
-  // Spanish: 9-digit numbers starting with 6 or 7 (mobile) or 8/9 (landline)
-  // Covers: 612 345 678, 912 345 678
-  es: /(?<!\d)[6-9]\d{2}[\s.\-]?\d{3}[\s.\-]?\d{3}(?!\d)/g,
-
-  // Italian: 10-digit mobiles (3xx) and landlines (0xx)
-  // Covers: 347 123 4567, 06 1234 5678
-  it: /(?<!\d)(?:3\d{2}|0\d{1,3})[\s.\-]?\d{3,4}[\s.\-]?\d{4}(?!\d)/g,
-
-  // Portuguese: 9-digit mobiles (9x) and landlines (2x)
-  // Covers: 912 345 678, 21 234 5678
-  pt: /(?<!\d)[29]\d{1,2}[\s.\-]?\d{3}[\s.\-]?\d{3,4}(?!\d)/g,
-
-  // Dutch: 10-digit starting with 0 — mobiles (06) and landlines (0xx)
-  // Covers: 06 12345678, 020 1234567
-  nl: /(?<!\d)0(?:6[\s\-]?\d{8}|\d{2}[\s\-]?\d{7})(?!\d)/g,
-
-  // Polish: 9-digit numbers (no leading 0), groups of 3
-  // Covers: 512 345 678, 22 234 5678
-  pl: /(?<!\d)(?:[45]\d{2}|[6789]\d{2}|[12]\d)[\s.\-]?\d{3}[\s.\-]?\d{3,4}(?!\d)/g,
-};
+function detectPhones(text: string): Detection[] {
+  const out = new Map<string, Detection>();
+  for (const region of phoneRegions()) {
+    let found;
+    try {
+      found = findPhoneNumbersInText(text, region);
+    } catch {
+      continue;
+    }
+    for (const f of found) {
+      const value = text.slice(f.startsAt, f.endsAt);
+      // A bare digit run ("1234567890") is only a phone if the text says so.
+      const bare = /^\d+$/.test(value);
+      if (bare && !PHONE_WORDS.test(before(text, f.startsAt, 30))) continue;
+      // libphonenumber is lenient about separators: dates and dotted quads
+      // ("2024-01-15", "192.168.1.10") are not phone numbers.
+      if (DATE_LIKE.test(value) || DOTTED_QUAD.test(value)) continue;
+      const key = `${f.startsAt}:${f.endsAt}`;
+      if (!out.has(key)) {
+        out.set(key, {
+          entityType: 'PHONE_NUMBER',
+          start: f.startsAt,
+          end: f.endsAt,
+          score: 0.8,
+          value,
+          source: 'regex',
+        });
+      }
+    }
+  }
+  return [...out.values()];
+}
 
 // ---------------------------------------------------------------------------
 // Public API
 // ---------------------------------------------------------------------------
 
 /**
- * Run regex-based detection on `text`.
- *
- * @param text  The message text to scan.
- * @param lang  BCP-47 language code (e.g. "fr", "de") used to add locale-
- *              specific phone patterns on top of the universal pattern.
- *              Defaults to "en" (no locale-specific extras beyond universal).
+ * Run all regex rules on `text`.
+ * The `lang` argument is accepted for API compatibility but no longer routes
+ * anything: phone detection is region-based and works for text in any language.
  */
-export function detectRegex(text: string, lang = 'en'): Detection[] {
+export function detectRegex(text: string, _lang?: string): Detection[] {
   const results: Detection[] = [];
 
-  results.push(...findAll(text, new RegExp(RE_EMAIL.source, 'g'), 'EMAIL_ADDRESS'));
-
-  // Universal phone (international format / US format)
-  results.push(...findAll(text, new RegExp(RE_PHONE_INTL.source, 'g'), 'PHONE_NUMBER'));
-
-  // Locale-specific local phone format (e.g. French "06 12 34 56 78")
-  const localPhoneRe = LOCALE_PHONE[lang];
-  if (localPhoneRe) {
-    results.push(...findAll(text, new RegExp(localPhoneRe.source, 'g'), 'PHONE_NUMBER'));
+  for (const rule of RULES) {
+    const re = new RegExp(rule.re.source, rule.re.flags);
+    for (const m of text.matchAll(re)) {
+      const g = rule.group ?? 0;
+      const value = m[g];
+      if (!value) continue;
+      const span = (m as RegExpMatchArray & { indices?: Array<[number, number]> }).indices?.[g];
+      const start = span ? span[0] : m.index! + m[0].indexOf(value);
+      const end = start + value.length;
+      if (rule.validate && !rule.validate(value)) continue;
+      if (rule.veto?.(text, start, end)) continue;
+      results.push({
+        entityType: rule.classify ? rule.classify(value) : rule.entity,
+        start,
+        end,
+        score: rule.score ?? 0.9,
+        value,
+        source: 'regex',
+      });
+    }
   }
 
-  results.push(
-    ...findAll(text, new RegExp(RE_CARD.source, 'g'), 'CREDIT_CARD', (v) =>
-      luhn(v.replace(/\D/g, '')) && v.replace(/\D/g, '').length >= 13,
-    ),
-  );
-  results.push(...findAll(text, new RegExp(RE_IBAN.source, 'g'), 'IBAN_CODE'));
-  results.push(...findAll(text, new RegExp(RE_SSN.source, 'g'), 'SSN'));
-  results.push(...findAll(text, new RegExp(RE_IPV4.source, 'g'), 'IP_ADDRESS'));
-  results.push(...findAll(text, new RegExp(RE_IPV6.source, 'g'), 'IP_ADDRESS'));
-  results.push(...findAll(text, new RegExp(RE_BTC.source, 'g'), 'CRYPTO'));
-  results.push(...findAll(text, new RegExp(RE_ETH.source, 'g'), 'CRYPTO'));
-
-  // SECRET_KEY: trim leading separator so the token covers only the secret value
-  const secretPattern = new RegExp(RE_SECRET.source, 'gim');
-  secretPattern.lastIndex = 0;
-  let m: RegExpExecArray | null;
-  while ((m = secretPattern.exec(text)) !== null) {
-    const raw = m[0];
-    const trimmed = raw.trimStart().replace(/^["'`=:\s]+/, '');
-    const offset = raw.length - trimmed.length;
-    results.push({
-      entityType: 'SECRET_KEY',
-      start: m.index + offset,
-      end: m.index + raw.length,
-      score: 0.9,
-      value: trimmed,
-      source: 'regex',
-    });
+  // A span another rule already explains (IP, AVS, NIR, ...) is not also a phone.
+  const structured = results.filter((r) => r.entityType !== 'PHONE_NUMBER');
+  for (const p of detectPhones(text)) {
+    if (!structured.some((r) => p.start < r.end && p.end > r.start)) results.push(p);
   }
+  return dedupeExact(results);
+}
 
-  // DATE_OF_BIRTH — only when preceded by a DOB label
-  const dobPattern = new RegExp(RE_DOB_LABEL.source, 'gi');
-  dobPattern.lastIndex = 0;
-  while ((m = dobPattern.exec(text)) !== null) {
-    const dateStr = m[1];
-    const dateStart = m.index + m[0].indexOf(dateStr);
-    results.push({
-      entityType: 'DATE_OF_BIRTH',
-      start: dateStart,
-      end: dateStart + dateStr.length,
-      score: 0.8,
-      value: dateStr,
-      source: 'regex',
-    });
+/** Identical spans reported by several rules: keep one, highest score. */
+function dedupeExact(items: Detection[]): Detection[] {
+  const best = new Map<string, Detection>();
+  for (const d of items) {
+    const key = `${d.start}:${d.end}`;
+    const cur = best.get(key);
+    if (!cur || d.score > cur.score) best.set(key, d);
   }
-
-  return results;
+  return [...best.values()].sort((a, b) => a.start - b.start);
 }

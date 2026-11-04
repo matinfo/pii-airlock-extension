@@ -28,11 +28,31 @@ const HIGH_RISK = new Set([
   'IP_ADDRESS',
   'CRYPTO',
   'SECRET_KEY',
+  'FR_NIR',
+  'CH_AHV',
+  'FR_SIRET',
+  'FR_SIREN',
+  'DE_TAX_ID',
+  'DE_TAX_NUMBER',
+  'IT_VAT_CODE',
 ]);
 
 const MEDIUM_RISK = new Set(['PERSON', 'LOCATION', 'ORG']);
 
-const LOW_RISK = new Set(['DATE_OF_BIRTH']);
+const LOW_RISK = new Set(['DATE_OF_BIRTH', 'IP_ADDRESS_PRIVATE']);
+
+/**
+ * Entities that are informational only by default: far too common in ordinary
+ * prose ("capital of France", "compare Google and Microsoft") to rewrite or
+ * interrupt. Users can still force a decision with a per-entity override.
+ */
+const NOTIFY_ONLY = new Set(['LOCATION', 'ORG', 'IP_ADDRESS_PRIVATE']);
+/** Subset of NOTIFY_ONLY that shows no notice at all. */
+const QUIET = new Set(['LOCATION', 'ORG']);
+
+export function isQuiet(entityType: string): boolean {
+  return QUIET.has(entityType);
+}
 
 export function tierOf(entityType: string): RiskTier {
   if (HIGH_RISK.has(entityType)) return 'high';
@@ -89,8 +109,7 @@ export function getDecision(detections: Detection[]): Decision {
   let worst: Decision = 'allow';
 
   for (const d of detections) {
-    const override = _settings.overrides[d.entityType];
-    const decision = override ?? decisionFromTier(tierOf(d.entityType), _settings.mode);
+    const decision = decisionFor(d);
     if (order.indexOf(decision) < order.indexOf(worst)) {
       worst = decision;
     }
@@ -101,7 +120,10 @@ export function getDecision(detections: Detection[]): Decision {
 
 /** Decision for a single detection (override, else tier × mode). */
 export function decisionFor(d: Detection): Decision {
-  return _settings.overrides[d.entityType] ?? decisionFromTier(tierOf(d.entityType), _settings.mode);
+  const override = _settings.overrides[d.entityType];
+  if (override) return override;
+  if (NOTIFY_ONLY.has(d.entityType)) return 'notify';
+  return decisionFromTier(tierOf(d.entityType), _settings.mode);
 }
 
 /** True when this detection must be replaced before the text may leave. */

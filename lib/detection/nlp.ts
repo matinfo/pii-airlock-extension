@@ -11,6 +11,7 @@
 
 import type { Detection } from './types';
 import nlp from 'compromise';
+import { NAME_PAIR_RE, isFirstName } from './names';
 
 /**
  * Languages whose script compromise cannot tokenise — NLP produces only noise,
@@ -52,21 +53,28 @@ export async function detectNlp(text: string, lang: string): Promise<Detection[]
         // PERSON is left ungated — compromise's people tagger is conservative,
         // and lowercase first names ("marie") are still real PII we must catch.
         if (requireUppercase && !startsUppercase(term)) return;
-        // Find ALL occurrences of this term in the text, not just the first.
-        // A name like "Alice" may appear more than once; each is independent PII.
-        let searchFrom = 0;
-        while (searchFrom < text.length) {
-          const idx = text.indexOf(term, searchFrom);
-          if (idx === -1) break;
+        // Find ALL occurrences, on word boundaries: indexOf would also hit the
+        // term inside other words ("Al" in "Alpha") and corrupt them on scrub.
+        const re = new RegExp(
+          `(?<![\\p{L}\\p{N}])${term.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}(?![\\p{L}\\p{N}])`,
+          'gu',
+        );
+        for (const m of text.matchAll(re)) {
+          const idx = m.index!;
+          // compromise tags some "First Last" names as ORG. A known first name
+          // in front means it is a person.
+          const asType =
+            entityType === 'ORG' && isFirstName(term.split(/[\s-]/)[0]!) && /\s/.test(term)
+              ? 'PERSON'
+              : entityType;
           results.push({
-            entityType,
+            entityType: asType,
             start: idx,
             end: idx + term.length,
-            score,
+            score: asType === 'PERSON' ? 0.75 : score,
             value: term,
             source: 'nlp',
           });
-          searchFrom = idx + 1; // advance past this match to find next
         }
       });
     }
@@ -74,6 +82,21 @@ export async function detectNlp(text: string, lang: string): Promise<Detection[]
     addMatches(doc.people(), 'PERSON', 0.75, false);
     addMatches(doc.places(), 'LOCATION', 0.65, true);
     addMatches(doc.organizations(), 'ORG', 0.65, true);
+
+    // "Jean Dupont": compromise's people tagger misses names outside its
+    // lexicon. A listed first name followed by capitalised word(s) is a person.
+    for (const m of text.matchAll(NAME_PAIR_RE)) {
+      if (isFirstName(m[1]!)) {
+        results.push({
+          entityType: 'PERSON',
+          start: m.index!,
+          end: m.index! + m[0].length,
+          score: 0.7,
+          value: m[0],
+          source: 'nlp',
+        });
+      }
+    }
 
     return results;
   } catch {

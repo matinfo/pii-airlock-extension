@@ -29,7 +29,7 @@ import { composerScope, isTextControl, setTextControl } from './adapters/dom';
 import { analyze } from './detection/engine';
 import type { Detection, DetectionResult } from './detection/types';
 import { BrowserMapping } from './mapping';
-import { mustScrub } from './policy';
+import { isQuiet, mustScrub } from './policy';
 import {
   UI_HOST_ID,
   dismissBanner,
@@ -286,7 +286,8 @@ export class SendGuard {
         return 'done';
 
       case 'notify':
-        showPill(detections.length, 'noticed'); // honest: sent unchanged
+        // honest wording (sent unchanged); stay silent for ubiquitous types
+        if (detections.some((d) => !isQuiet(d.entityType))) showPill(detections.length, 'noticed');
         await this.send(ctx);
         return 'done';
 

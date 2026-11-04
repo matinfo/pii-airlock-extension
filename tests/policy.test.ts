@@ -46,7 +46,11 @@ describe('getDecision — strict mode (default)', () => {
 
   it('returns auto_scrub for medium-risk', () => {
     expect(getDecision([makeDetection('PERSON')])).toBe('auto_scrub');
-    expect(getDecision([makeDetection('LOCATION')])).toBe('auto_scrub');
+  });
+
+  it('LOCATION and ORG are notify-only by default (too common in prose)', () => {
+    expect(getDecision([makeDetection('LOCATION')])).toBe('notify');
+    expect(getDecision([makeDetection('ORG')])).toBe('notify');
   });
 
   it('returns warn for low-risk', () => {

@@ -63,7 +63,7 @@ describe('analyze: high-risk PII (strict)', () => {
   });
 
   it('blocks on IP address', async () => {
-    const r = await analyze('connect to 192.168.1.100', { skipNlp: true });
+    const r = await analyze('connect to 8.8.8.8', { skipNlp: true });
     expect(r.decision).toBe('block');
     expect(r.topTier).toBe('high');
   });
