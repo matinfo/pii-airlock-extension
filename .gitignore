@@ -28,3 +28,5 @@ web-ext.config.ts
 # NER assets (fetched by scripts/fetch-ner-assets.ts)
 public/models/
 public/wasm/
+e2e/.dist
+test-results

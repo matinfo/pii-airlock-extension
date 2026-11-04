@@ -19,6 +19,7 @@
     "fetch:ner": "bun run scripts/fetch-ner-assets.ts",
     "compile": "tsc --noEmit",
     "test": "bun test tests/",
+    "e2e": "bun scripts/build-fixtures.ts && playwright test",
     "postinstall": "wxt prepare"
   },
   "dependencies": {
@@ -30,10 +31,17 @@
   },
   "devDependencies": {
     "@happy-dom/global-registrator": "^20.14.6",
+    "@playwright/test": "^1.64.1",
     "@types/react": "^19.3.0",
     "@types/react-dom": "^19.3.0",
     "@wxt-dev/module-react": "^1.2.2",
     "happy-dom": "^20.14.6",
+    "prosemirror-commands": "^1.7.2",
+    "prosemirror-keymap": "^1.2.3",
+    "prosemirror-model": "^1.25.12",
+    "prosemirror-schema-basic": "^1.2.5",
+    "prosemirror-state": "^1.4.4",
+    "prosemirror-view": "^1.42.9",
     "typescript": "^5.9.3",
     "wxt": "^0.20.27"
   }
