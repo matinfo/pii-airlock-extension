@@ -22,19 +22,19 @@
     "postinstall": "wxt prepare"
   },
   "dependencies": {
-    "@huggingface/transformers": "^4.2.0",
-    "compromise": "^14.15.1",
+    "@huggingface/transformers": "^4.3.2",
+    "compromise": "^14.19.0",
     "franc-min": "^6.2.0",
-    "react": "^19.2.4",
-    "react-dom": "^19.2.4"
+    "react": "^19.3.1",
+    "react-dom": "^19.3.1"
   },
   "devDependencies": {
-    "@happy-dom/global-registrator": "^20.10.6",
-    "@types/react": "^19.2.14",
-    "@types/react-dom": "^19.2.3",
-    "@wxt-dev/module-react": "^1.1.5",
-    "happy-dom": "^20.10.6",
+    "@happy-dom/global-registrator": "^20.14.6",
+    "@types/react": "^19.3.0",
+    "@types/react-dom": "^19.3.0",
+    "@wxt-dev/module-react": "^1.2.2",
+    "happy-dom": "^20.14.6",
     "typescript": "^5.9.3",
-    "wxt": "^0.20.26"
+    "wxt": "^0.20.27"
   }
 }
