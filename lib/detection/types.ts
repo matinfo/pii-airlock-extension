@@ -21,6 +21,8 @@ export interface DetectionResult {
   detections: Detection[];
   topTier: RiskTier | null;   // highest tier found, or null if nothing found
   decision: Decision;          // computed by policy engine
+  /** True when detection itself failed. `detections` is then NOT trustworthy: never scrub-and-send. */
+  error?: boolean;
 }
 
 /** A stable token replacing a PII span, e.g. "<EMAIL_ADDRESS_1>". */

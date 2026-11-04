@@ -1,6 +1,7 @@
 /** Adapter for poe.com. */
 
 import type { ChatAdapter } from './types';
+import { queryInScope } from './dom';
 
 export const poeAdapter: ChatAdapter = {
   name: 'poe',
@@ -16,11 +17,12 @@ export const poeAdapter: ChatAdapter = {
     );
   },
 
-  findSendButton(): HTMLElement | null {
+  findSendButton(composer?: HTMLElement): HTMLElement | null {
+    const c = composer ?? this.findComposer();
     return (
-      document.querySelector<HTMLElement>('button[class*="SendButton"]') ??
-      document.querySelector<HTMLElement>('[class*="ChatMessageInputContainer"] button[type="submit"]') ??
-      document.querySelector<HTMLElement>('button[aria-label*="Send" i]') ??
+      queryInScope(c, 'button[class*="SendButton"]') ??
+      queryInScope(c, '[class*="ChatMessageInputContainer"] button[type="submit"]') ??
+      queryInScope(c, 'button[aria-label*="Send" i]') ??
       null
     );
   },

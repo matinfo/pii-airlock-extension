@@ -1,6 +1,7 @@
 /** Adapter for mistral.ai/chat. */
 
 import type { ChatAdapter } from './types';
+import { queryInScope } from './dom';
 
 export const mistralAdapter: ChatAdapter = {
   name: 'mistral',
@@ -17,11 +18,12 @@ export const mistralAdapter: ChatAdapter = {
     );
   },
 
-  findSendButton(): HTMLElement | null {
+  findSendButton(composer?: HTMLElement): HTMLElement | null {
+    const c = composer ?? this.findComposer();
     return (
-      document.querySelector<HTMLElement>('button[type="submit"]') ??
-      document.querySelector<HTMLElement>('button[aria-label*="Send" i]') ??
-      document.querySelector<HTMLElement>('button[data-testid*="send" i]') ??
+      queryInScope(c, 'button[type="submit"]') ??
+      queryInScope(c, 'button[aria-label*="Send" i]') ??
+      queryInScope(c, 'button[data-testid*="send" i]') ??
       null
     );
   },

@@ -81,6 +81,7 @@ export async function analyze(
       detections: [],
       topTier: 'high',
       decision: 'block',
+      error: true,
     };
   }
 }

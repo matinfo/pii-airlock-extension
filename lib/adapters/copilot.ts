@@ -1,7 +1,7 @@
 /** Adapter for copilot.microsoft.com. */
 
 import type { ChatAdapter } from './types';
-import { replaceContentEditable } from './dom';
+import { replaceContentEditable, queryInScope } from './dom';
 
 export const copilotAdapter: ChatAdapter = {
   name: 'copilot',
@@ -15,11 +15,12 @@ export const copilotAdapter: ChatAdapter = {
     );
   },
 
-  findSendButton(): HTMLElement | null {
+  findSendButton(composer?: HTMLElement): HTMLElement | null {
+    const c = composer ?? this.findComposer();
     return (
-      document.querySelector<HTMLElement>('button[aria-label*="Submit" i]') ??
-      document.querySelector<HTMLElement>('button[aria-label*="Send" i]') ??
-      document.querySelector<HTMLElement>('button[type="submit"]') ??
+      queryInScope(c, 'button[aria-label*="Submit" i]') ??
+      queryInScope(c, 'button[aria-label*="Send" i]') ??
+      queryInScope(c, 'button[type="submit"]') ??
       null
     );
   },

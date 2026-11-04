@@ -98,3 +98,14 @@ export function getDecision(detections: Detection[]): Decision {
 
   return worst;
 }
+
+/** Decision for a single detection (override, else tier × mode). */
+export function decisionFor(d: Detection): Decision {
+  return _settings.overrides[d.entityType] ?? decisionFromTier(tierOf(d.entityType), _settings.mode);
+}
+
+/** True when this detection must be replaced before the text may leave. */
+export function mustScrub(d: Detection): boolean {
+  const dec = decisionFor(d);
+  return dec === 'block' || dec === 'auto_scrub' || dec === 'warn';
+}

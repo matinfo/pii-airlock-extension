@@ -1,7 +1,7 @@
 /** Adapter for perplexity.ai. */
 
 import type { ChatAdapter } from './types';
-import { replaceContentEditable } from './dom';
+import { replaceContentEditable, queryInScope } from './dom';
 
 export const perplexityAdapter: ChatAdapter = {
   name: 'perplexity',
@@ -15,10 +15,11 @@ export const perplexityAdapter: ChatAdapter = {
     );
   },
 
-  findSendButton(): HTMLElement | null {
+  findSendButton(composer?: HTMLElement): HTMLElement | null {
+    const c = composer ?? this.findComposer();
     return (
-      document.querySelector<HTMLElement>('button[aria-label*="Submit" i]') ??
-      document.querySelector<HTMLElement>('button[type="submit"]') ??
+      queryInScope(c, 'button[aria-label*="Submit" i]') ??
+      queryInScope(c, 'button[type="submit"]') ??
       null
     );
   },

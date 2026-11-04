@@ -1,6 +1,7 @@
 /** Adapter for you.com AI chat. */
 
 import type { ChatAdapter } from './types';
+import { queryInScope } from './dom';
 
 export const youAdapter: ChatAdapter = {
   name: 'you.com',
@@ -16,11 +17,12 @@ export const youAdapter: ChatAdapter = {
     );
   },
 
-  findSendButton(): HTMLElement | null {
+  findSendButton(composer?: HTMLElement): HTMLElement | null {
+    const c = composer ?? this.findComposer();
     return (
-      document.querySelector<HTMLElement>('button[aria-label*="Search" i]') ??
-      document.querySelector<HTMLElement>('button[aria-label*="Send" i]') ??
-      document.querySelector<HTMLElement>('button[type="submit"]') ??
+      queryInScope(c, 'button[aria-label*="Search" i]') ??
+      queryInScope(c, 'button[aria-label*="Send" i]') ??
+      queryInScope(c, 'button[type="submit"]') ??
       null
     );
   },
