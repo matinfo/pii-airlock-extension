@@ -4,11 +4,13 @@
  */
 
 import type { Detection } from '../detection/types';
-import type { Decision } from '../detection/types';
 
 // ---------------------------------------------------------------------------
 // Shadow host setup (shared)
 // ---------------------------------------------------------------------------
+
+/** Id of the shadow host; the send guard ignores events that originate here. */
+export const UI_HOST_ID = 'pii-airlock-ui';
 
 let _shadowHost: HTMLElement | null = null;
 let _shadowRoot: ShadowRoot | null = null;
@@ -17,7 +19,7 @@ function getShadowRoot(): ShadowRoot {
   if (_shadowRoot) return _shadowRoot;
 
   _shadowHost = document.createElement('div');
-  _shadowHost.id = 'pii-airlock-ui';
+  _shadowHost.id = UI_HOST_ID;
   _shadowHost.style.cssText = 'position:fixed;z-index:2147483647;top:0;left:0;width:0;height:0;pointer-events:none;';
   document.body.appendChild(_shadowHost);
 
@@ -83,73 +85,98 @@ function getShadowRoot(): ShadowRoot {
     .pii-modal button { border: none; border-radius: 7px; padding: 8px 16px; font-size: 13px; font-weight: 600; cursor: pointer; }
     .btn-modal-scrub { background: #3b82f6; color: #fff; }
     .btn-modal-edit  { background: #e5e7eb; color: #374151; }
+    .btn-modal-raw   { background: transparent; color: #991b1b; text-decoration: underline; }
+    button:focus-visible { outline: 2px solid #1d4ed8; outline-offset: 2px; }
   `;
   _shadowRoot.appendChild(style);
   return _shadowRoot;
 }
 
 // ---------------------------------------------------------------------------
-// Banner (warn decisions)
+// Banner (warn decisions, and paste warnings)
 // ---------------------------------------------------------------------------
 
 let _banner: HTMLElement | null = null;
+let _bannerResolve: ((a: BannerAction) => void) | null = null;
 
-export interface BannerResult {
-  action: 'scrub' | 'edit' | 'send';
-}
+export type BannerAction = 'scrub' | 'edit' | 'send';
 
+/**
+ * Non-modal banner. Resolves with the user's choice; resolves 'edit' when
+ * replaced or dismissed, so a caller awaiting it is never left hanging.
+ * `context: 'paste'` shows "Scrub now / Dismiss" (there is no send to confirm).
+ */
 export function showBanner(
   detections: Detection[],
   isHigh: boolean,
-  onAction: (r: BannerResult) => void,
-): void {
+  context: 'send' | 'paste' = 'send',
+): Promise<BannerAction> {
   dismissBanner();
   const root = getShadowRoot();
 
   const banner = document.createElement('div');
   banner.className = `pii-banner${isHigh ? ' high' : ''}`;
+  banner.setAttribute('role', 'alert');
 
   const entities = [...new Set(detections.map((d) => d.entityType))].join(', ');
+  const paste = context === 'paste';
 
-  banner.innerHTML = `
-    <span class="icon">${isHigh ? '🔴' : '⚠️'}</span>
-    <div class="body">
-      <div class="title">PII detected before sending</div>
-      <div class="detail">${entities}</div>
-    </div>
-    <div class="actions">
-      <button class="btn-scrub">Auto-scrub &amp; send</button>
-      <button class="btn-edit">Edit</button>
-      ${!isHigh ? '<button class="btn-send">Send anyway</button>' : ''}
-    </div>
-  `;
+  const icon = el('span', 'icon', isHigh ? '\u{1F534}' : '\u26A0\uFE0F');
+  const body = el('div', 'body');
+  body.append(
+    el('div', 'title', paste ? 'Pasted text contains PII' : 'PII detected before sending'),
+    el('div', 'detail', entities),
+  );
+  const actions = el('div', 'actions');
 
-  banner.querySelector('.btn-scrub')?.addEventListener('click', () => { dismissBanner(); onAction({ action: 'scrub' }); });
-  banner.querySelector('.btn-edit')?.addEventListener('click', () => { dismissBanner(); onAction({ action: 'edit' }); });
-  banner.querySelector('.btn-send')?.addEventListener('click', () => { dismissBanner(); onAction({ action: 'send' }); });
+  return new Promise<BannerAction>((resolve) => {
+    const done = (a: BannerAction) => { dismissBanner(); resolve(a); };
+    _bannerResolve = resolve;
+    actions.append(
+      button('btn-scrub', paste ? 'Scrub now' : 'Auto-scrub & send', () => done('scrub')),
+      button('btn-edit', paste ? 'Dismiss' : 'Edit', () => done('edit')),
+    );
+    if (!paste && !isHigh) actions.append(button('btn-send', 'Send anyway', () => done('send')));
+    banner.append(icon, body, actions);
+    root.appendChild(banner);
+    _banner = banner;
+  });
+}
 
-  root.appendChild(banner);
-  _banner = banner;
+export function isBannerOpen(): boolean {
+  return _banner !== null;
 }
 
 export function dismissBanner(): void {
   _banner?.remove();
   _banner = null;
+  const r = _bannerResolve;
+  _bannerResolve = null;
+  r?.('edit');
 }
 
 // ---------------------------------------------------------------------------
-// Pill (auto_scrub confirmation)
+// Pill (post-send status)
 // ---------------------------------------------------------------------------
 
 let _pill: HTMLElement | null = null;
 
-export function showPill(count: number): void {
+/**
+ * `scrubbed`: values were replaced before sending.
+ * `noticed`: values were detected but NOT changed (policy allowed them through).
+ */
+export function showPill(count: number, kind: 'scrubbed' | 'noticed' = 'scrubbed'): void {
   dismissPill();
   const root = getShadowRoot();
   const pill = document.createElement('div');
   pill.className = 'pii-pill';
-  pill.textContent = `🔒 ${count} item${count !== 1 ? 's' : ''} scrubbed`;
-  pill.title = 'PII was automatically replaced with tokens before sending';
+  const s = count !== 1 ? 's' : '';
+  pill.textContent = kind === 'scrubbed'
+    ? `\u{1F512} ${count} item${s} scrubbed`
+    : `\u2139\uFE0F ${count} possible item${s} noticed, sent as is`;
+  pill.title = kind === 'scrubbed'
+    ? 'PII was replaced with tokens before sending'
+    : 'Policy allowed these through unchanged';
   pill.addEventListener('click', dismissPill);
   root.appendChild(pill);
   _pill = pill;
@@ -162,45 +189,107 @@ export function dismissPill(): void {
 }
 
 // ---------------------------------------------------------------------------
-// Modal (block decisions)
+// Modal (block decisions and real failures)
 // ---------------------------------------------------------------------------
 
-export interface ModalResult {
-  action: 'scrub' | 'edit';
-}
+/**
+ * detected     – PII found, scrub offered.
+ * scrub-failed – a scrub was attempted but the editor did not commit it. No
+ *                scrub button: retrying cannot help, the user must edit.
+ * error        – detection itself failed; nothing is known about the text.
+ *                Scrubbing is meaningless; only Edit or an explicit raw send.
+ */
+export type ModalKind = 'detected' | 'scrub-failed' | 'error';
+export type ModalAction = 'scrub' | 'edit' | 'send-unscanned';
 
-export function showModal(
-  detections: Detection[],
-  onAction: (r: ModalResult) => void,
-): void {
+let _modal: Promise<ModalAction> | null = null;
+
+/** One modal at a time: a repeat call returns the open one's promise. */
+export function showModal(kind: ModalKind, detections: Detection[]): Promise<ModalAction> {
+  if (_modal) return _modal;
   const root = getShadowRoot();
+  const previous = document.activeElement as HTMLElement | null;
 
-  const overlay = document.createElement('div');
-  overlay.className = 'pii-modal-overlay';
+  const overlay = el('div', 'pii-modal-overlay');
+  const box = el('div', 'pii-modal');
+  box.setAttribute('role', 'alertdialog');
+  box.setAttribute('aria-modal', 'true');
 
-  const entityItems = [...new Set(detections.map((d) => d.entityType))]
-    .map((t) => `<li><span class="badge">${t}</span>${summarize(detections, t)}</li>`)
-    .join('');
+  const copy = {
+    detected: ['Sensitive data detected', 'Your message appears to contain personal data. Review before sending.'],
+    'scrub-failed': ['Could not scrub this message', 'The editor did not accept the replacement, so the message was NOT sent. Edit it by hand to remove the highlighted values.'],
+    error: ['Could not check this message', 'Detection failed, so nothing is known about this text. The message was NOT sent.'],
+  }[kind];
+  const h2 = el('h2', undefined, copy[0]!);
+  h2.id = 'pii-modal-title';
+  box.setAttribute('aria-labelledby', 'pii-modal-title');
+  box.append(h2, el('p', undefined, copy[1]!));
 
-  overlay.innerHTML = `
-    <div class="pii-modal">
-      <h2>🔴 Sensitive data detected</h2>
-      <p>Your message appears to contain personal data. Review before sending.</p>
-      <ul class="entity-list">${entityItems}</ul>
-      <div class="actions">
-        <button class="btn-modal-scrub">Auto-scrub &amp; send</button>
-        <button class="btn-modal-edit">Edit message</button>
-      </div>
-    </div>
-  `;
+  if (detections.length > 0) {
+    const ul = el('ul', 'entity-list');
+    for (const t of new Set(detections.map((d) => d.entityType))) {
+      const li = document.createElement('li');
+      li.append(el('span', 'badge', t), document.createTextNode(summarize(detections, t)));
+      ul.appendChild(li);
+    }
+    box.appendChild(ul);
+  }
 
-  overlay.querySelector('.btn-modal-scrub')?.addEventListener('click', () => { overlay.remove(); onAction({ action: 'scrub' }); });
-  overlay.querySelector('.btn-modal-edit')?.addEventListener('click', () => { overlay.remove(); onAction({ action: 'edit' }); });
+  const actions = el('div', 'actions');
+  box.appendChild(actions);
+  overlay.appendChild(box);
 
-  root.appendChild(overlay);
+  _modal = new Promise<ModalAction>((resolve) => {
+    const finish = (a: ModalAction) => {
+      overlay.remove();
+      _modal = null;
+      previous?.focus?.();
+      resolve(a);
+    };
+    const buttons: HTMLButtonElement[] = [];
+    if (kind === 'error') {
+      buttons.push(button('btn-modal-raw', 'Send unscanned', () => finish('send-unscanned')));
+    }
+    if (kind === 'detected') {
+      buttons.push(button('btn-modal-scrub', 'Auto-scrub & send', () => finish('scrub')));
+    }
+    const edit = button('btn-modal-edit', 'Edit message', () => finish('edit'));
+    buttons.push(edit);
+    actions.append(...buttons);
+
+    overlay.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); finish('edit'); return; }
+      if (e.key === 'Tab') {
+        const i = buttons.indexOf(root.activeElement as HTMLButtonElement);
+        const next = e.shiftKey ? (i <= 0 ? buttons.length - 1 : i - 1) : (i + 1) % buttons.length;
+        e.preventDefault();
+        buttons[next]?.focus();
+      }
+    });
+    root.appendChild(overlay);
+    // Focus the safe default (Edit), never a destructive/raw action.
+    edit.focus();
+  });
+  return _modal;
 }
 
 function summarize(detections: Detection[], entityType: string): string {
   const count = detections.filter((d) => d.entityType === entityType).length;
-  return count > 1 ? ` ×${count}` : '';
+  return count > 1 ? ` \u00D7${count}` : '';
+}
+
+function el(tag: string, cls?: string, text?: string): HTMLElement {
+  const e = document.createElement(tag);
+  if (cls) e.className = cls;
+  if (text !== undefined) e.textContent = text;
+  return e;
+}
+
+function button(cls: string, label: string, onClick: () => void): HTMLButtonElement {
+  const b = document.createElement('button');
+  b.type = 'button';
+  b.className = cls;
+  b.textContent = label;
+  b.addEventListener('click', onClick);
+  return b;
 }

@@ -1,8 +1,9 @@
 import { resolveAdapter } from '../lib/adapters';
-import { SendInterceptor } from '../lib/intercept';
+import { SendGuard } from '../lib/intercept';
 import { applySettings } from '../lib/policy';
 import { setNerTransport } from '../lib/detection/ner-client';
 import { NER_DETECT, type NerDetectResponse } from '../lib/detection/ner-messages';
+import { MSG } from '../lib/messages';
 
 export default defineContentScript({
   matches: [
@@ -40,38 +41,31 @@ export default defineContentScript({
       .then((s) => applySettings(s as Parameters<typeof applySettings>[0]));
 
     const adapter = resolveAdapter();
-    let interceptor: SendInterceptor | null = null;
 
-    // Increment persistent scrub counter so the popup can show lifetime stats.
-    function onScrub(count: number) {
-      browser.storage.sync.get({ scrubCount: 0 }).then((s) => {
-        browser.storage.sync.set({ scrubCount: (s.scrubCount as number) + count });
-      });
-    }
-
-    function attach() {
-      const composer = adapter.findComposer();
-      if (!composer) return;
-
-      // Already attached to this exact element — skip
-      if ((composer as HTMLElement & { _piiAttached?: boolean })._piiAttached) return;
-      (composer as HTMLElement & { _piiAttached?: boolean })._piiAttached = true;
-
-      interceptor?.destroy();
-      interceptor = new SendInterceptor(composer, adapter, { onScrub });
-    }
-
-    attach();
-
-    // Re-attach when the SPA remounts the composer (React, Vue, Svelte SPAs).
-    // Debounced: SPAs fire hundreds of mutations per keystroke; we only need to
-    // act after a quiescent moment, not on every individual DOM change.
-    let debounceTimer = 0;
-    const observer = new MutationObserver(() => {
-      clearTimeout(debounceTimer);
-      debounceTimer = window.setTimeout(attach, 400);
+    // Persistent scrub counter for the popup. storage.local (not sync: no point
+    // syncing a counter) and updated in the background to avoid get+set races
+    // between tabs.
+    const guard = new SendGuard(adapter, {
+      onScrub: (count) => {
+        browser.runtime.sendMessage({ type: MSG.SCRUBBED, count }).catch(() => {});
+      },
     });
-    observer.observe(document.body, { childList: true, subtree: true });
+    // Stateless: listeners live on `document`, so SPA remounts cannot open a gap.
+    guard.install();
+
+    // Health: does this page actually have a composer we can protect? A broken
+    // selector otherwise fails silently while the popup claims "Active".
+    let lastHealth: boolean | null = null;
+    const checkHealth = () => {
+      const ok = adapter.findComposer() !== null;
+      if (ok === lastHealth) return;
+      lastHealth = ok;
+      browser.runtime.sendMessage({ type: MSG.HEALTH, ok }).catch(() => {});
+    };
+    // Grace period for the SPA to mount; then a cheap periodic check
+    // (a querySelector every few seconds, no MutationObserver churn).
+    setTimeout(checkHealth, 4000);
+    setInterval(checkHealth, 5000);
 
     // Propagate settings changes from popup / options page in real-time
     browser.storage.onChanged.addListener((changes) => {
@@ -83,17 +77,12 @@ export default defineContentScript({
       }
     });
 
-    // PANIC_CLEAR: popup button wipes all in-memory mappings immediately
-    browser.runtime.onMessage.addListener((msg) => {
-      if ((msg as { type?: string }).type === 'PANIC_CLEAR') {
-        interceptor?.destroy();
-        interceptor = null;
-        // Force re-attach fresh (clears BrowserMapping inside old interceptor)
-        const composer = adapter.findComposer();
-        if (composer) {
-          (composer as HTMLElement & { _piiAttached?: boolean })._piiAttached = false;
-        }
-        attach();
+    browser.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
+      const type = (msg as { type?: string }).type;
+      if (type === MSG.PANIC_CLEAR) {
+        guard.clearMapping();
+      } else if (type === MSG.STATUS) {
+        sendResponse({ site: adapter.name, composerFound: adapter.findComposer() !== null });
       }
     });
   },
