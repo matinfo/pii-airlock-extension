@@ -28,6 +28,10 @@ export class SendInterceptor {
   private composer: HTMLElement;
   private adapter: ChatAdapter;
   private _active = true;
+  /** True while WE are programmatically sending, so our own capture
+   *  listeners don't re-intercept the synthetic click/keydown (which would
+   *  loop or block the real send). */
+  private _sending = false;
   private _onScrub?: (n: number) => void;
 
   // Bound handlers — stored for cleanup
@@ -44,7 +48,15 @@ export class SendInterceptor {
     this._onDocClick = this.handleDocClick.bind(this);
     this._onPaste = this.handlePaste.bind(this);
 
-    composer.addEventListener('keydown', this._onKeydown, true);
+    // Keydown MUST be on document at capture phase, NOT on the composer.
+    // When the composer is the event target, capture/bubble collapses and
+    // listeners fire in *registration order* — the page's editor (ProseMirror,
+    // Quill, Lexical) registered its Enter-to-send handler first (at app boot,
+    // before our content script), so a composer-level listener would lose the
+    // race and the raw text would send before we ever see it. A capture-phase
+    // listener on an ancestor (document) runs before ANY target-level listener,
+    // regardless of registration order. Same reason the click handler is here.
+    document.addEventListener('keydown', this._onKeydown, true);
     composer.addEventListener('paste', this._onPaste, true);
 
     // Document-level click capture: survives React remounting the send button.
@@ -56,18 +68,23 @@ export class SendInterceptor {
   // Event handlers
   // ---------------------------------------------------------------------------
 
-  private async handleKeydown(e: KeyboardEvent): Promise<void> {
-    if (!this._active) return;
+  private handleKeydown(e: KeyboardEvent): void {
+    if (!this._active || this._sending) return;
     // Enter without Shift = send intent
     if (e.key !== 'Enter' || e.shiftKey || e.ctrlKey || e.metaKey) return;
+    // Document-level listener: only act when the keystroke is inside our
+    // composer (ignore Enter in other inputs, our own modal/banner, etc.).
+    const target = e.target as Node | null;
+    if (!(target instanceof Node)) return;
+    if (target !== this.composer && !this.composer.contains(target)) return;
 
     e.preventDefault();
     e.stopImmediatePropagation();
-    await this.evaluate();
+    void this.evaluate();
   }
 
   private handleDocClick(e: MouseEvent): void {
-    if (!this._active) return;
+    if (!this._active || this._sending) return;
     // Re-query each time — the button may have been remounted by the SPA
     const btn = this.adapter.findSendButton();
     if (!btn) return;
@@ -108,7 +125,7 @@ export class SendInterceptor {
     const text = this.adapter.getText(this.composer);
 
     if (!text.trim()) {
-      this.adapter.triggerSend(this.composer);
+      void this.programmaticSend();
       return;
     }
 
@@ -117,33 +134,33 @@ export class SendInterceptor {
 
     switch (decision) {
       case 'allow':
-        this.adapter.triggerSend(this.composer);
+        void this.programmaticSend();
         break;
 
       case 'notify':
         showPill(detections.length);
-        this.adapter.triggerSend(this.composer);
+        void this.programmaticSend();
         break;
 
       case 'warn':
         showBanner(detections, false, ({ action }) => {
           if (action === 'scrub') {
-            this.doScrubAndSend(text, detections);
+            void this.doScrubAndSend(text, detections);
           } else if (action === 'send') {
-            this.adapter.triggerSend(this.composer);
+            void this.programmaticSend();
           }
           // 'edit' → do nothing, user corrects the message
         });
         break;
 
       case 'auto_scrub':
-        this.doScrubAndSend(text, detections);
+        await this.doScrubAndSend(text, detections);
         break;
 
       case 'block':
         showModal(detections, ({ action }) => {
           if (action === 'scrub') {
-            this.doScrubAndSend(text, detections);
+            void this.doScrubAndSend(text, detections);
           }
           // 'edit' → do nothing
         });
@@ -151,13 +168,67 @@ export class SendInterceptor {
     }
   }
 
-  private doScrubAndSend(text: string, detections: import('./detection/types').Detection[]): void {
+  private async doScrubAndSend(
+    text: string,
+    detections: import('./detection/types').Detection[],
+  ): Promise<void> {
     const scrubbed = this.mapping.scrub(text, detections);
     this.adapter.setText(this.composer, scrubbed);
+
+    // CRITICAL invariant (#1/#3): never send if the live composer still holds
+    // raw PII. Some editors (ProseMirror/Lexical) keep an internal document and
+    // may ignore a programmatic setText — the message would *look* scrubbed but
+    // send the original. Verify the replacement actually committed before send.
+    // Wait a frame so the editor can process the input event, then re-read.
+    await new Promise((r) => requestAnimationFrame(() => r(null)));
+    const after = this.adapter.getText(this.composer);
+    const leaked = detections.filter((d) => after.includes(d.value));
+
+    if (leaked.length > 0) {
+      // Scrub did not commit — fail closed. Do NOT send. Tell the user.
+      console.error(
+        '[pii-airlock] scrub failed to commit to the composer; blocking send to prevent leak',
+        leaked.map((d) => d.entityType),
+      );
+      showModal(detections, () => {
+        /* user must edit/clear manually — never auto-send raw PII */
+      });
+      return;
+    }
+
     const n = detections.length;
     showPill(n);
     this._onScrub?.(n);
-    this.adapter.triggerSend(this.composer);
+    await this.programmaticSend();
+  }
+
+  /**
+   * Trigger send programmatically with the re-entrancy guard set, so our own
+   * capture-phase keydown/click listeners don't intercept the synthetic event
+   * (which would loop, or preventDefault the real send).
+   *
+   * After a programmatic setText, editors (ProseMirror/Quill) re-render and
+   * briefly DISABLE their send button, so a synchronous button click no-ops and
+   * the scrubbed message never sends. Poll a few frames for the button to enable
+   * before triggering. Falls back to the adapter's Enter-dispatch when there is
+   * no button to inspect.
+   */
+  private async programmaticSend(): Promise<void> {
+    this._sending = true;
+    try {
+      for (let i = 0; i < 10; i++) {
+        const btn = this.adapter.findSendButton();
+        if (!btn) break; // no button → adapter uses Enter fallback
+        const disabled =
+          (btn as HTMLButtonElement).disabled ||
+          btn.getAttribute('aria-disabled') === 'true';
+        if (!disabled) break; // ready to click
+        await new Promise((r) => requestAnimationFrame(() => r(null)));
+      }
+      this.adapter.triggerSend(this.composer);
+    } finally {
+      this._sending = false;
+    }
   }
 
   // ---------------------------------------------------------------------------
@@ -167,7 +238,7 @@ export class SendInterceptor {
   destroy(): void {
     this._active = false;
     dismissBanner();
-    this.composer.removeEventListener('keydown', this._onKeydown, true);
+    document.removeEventListener('keydown', this._onKeydown, true);
     this.composer.removeEventListener('paste', this._onPaste, true);
     document.removeEventListener('click', this._onDocClick, true);
     this.mapping.clear();

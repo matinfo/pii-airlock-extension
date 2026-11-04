@@ -1,6 +1,8 @@
 import { resolveAdapter } from '../lib/adapters';
 import { SendInterceptor } from '../lib/intercept';
 import { applySettings } from '../lib/policy';
+import { setNerTransport } from '../lib/detection/ner-client';
+import { NER_DETECT, type NerDetectResponse } from '../lib/detection/ner-messages';
 
 export default defineContentScript({
   matches: [
@@ -17,6 +19,21 @@ export default defineContentScript({
     '*://you.com/*',
   ],
   main() {
+    // Route Layer 3 NER to the background (→ offscreen on Chrome, direct on
+    // Firefox). Fail-open: any messaging error yields [] so L1+L2 still run.
+    setNerTransport(async (text, lang) => {
+      try {
+        const res = (await browser.runtime.sendMessage({
+          type: NER_DETECT,
+          text,
+          lang,
+        })) as NerDetectResponse | undefined;
+        return res?.detections ?? [];
+      } catch {
+        return [];
+      }
+    });
+
     // Load settings from storage then activate
     browser.storage.sync
       .get({ mode: 'strict', overrides: {} })
