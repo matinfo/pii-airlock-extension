@@ -65,7 +65,7 @@ export default defineConfig({
       'https://claude.ai/*',
       'https://gemini.google.com/*',
       'https://copilot.microsoft.com/*',
-      'https://perplexity.ai/*',
+      'https://*.perplexity.ai/*',
       'https://poe.com/*',
       'https://character.ai/*',
       'https://*.mistral.ai/*',
