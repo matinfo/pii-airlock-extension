@@ -6,6 +6,8 @@ export const MSG = {
   HEALTH: 'PII_HEALTH',
   /** popup → content: report protection status of this tab. */
   STATUS: 'PII_STATUS',
+  /** options → hosts: model installed/removed; drop cached NER state. */
+  NER_RESET: 'pii-airlock:ner:reset',
   /** popup → content: wipe in-memory token mapping. */
   PANIC_CLEAR: 'PANIC_CLEAR',
 } as const;

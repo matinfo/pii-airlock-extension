@@ -7,7 +7,8 @@
  * a remote CDN (invariant #3).
  */
 
-import { configureNerEnv, detectNer } from '../../lib/detection/ner';
+import { configureNerEnv, detectNer, resetNerState } from '../../lib/detection/ner';
+import { MSG } from '../../lib/messages';
 import {
   isNerOffscreenRequest,
   type NerDetectResponse,
@@ -17,15 +18,19 @@ let ready: Promise<void> | null = null;
 
 function ensureConfigured(): Promise<void> {
   if (!ready) {
-    ready = configureNerEnv(
-      browser.runtime.getURL('models/' as never),
-      browser.runtime.getURL('wasm/' as never),
-    );
+    ready = configureNerEnv({
+      mjs: browser.runtime.getURL('wasm/ort-wasm-simd-threaded.mjs' as never),
+      wasm: browser.runtime.getURL('wasm/ort-wasm-simd-threaded.wasm' as never),
+    });
   }
   return ready;
 }
 
 browser.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
+  if ((msg as { type?: string })?.type === MSG.NER_RESET) {
+    resetNerState();
+    return false;
+  }
   if (!isNerOffscreenRequest(msg)) return false;
   void (async () => {
     let detections: NerDetectResponse['detections'] = [];

@@ -26,7 +26,6 @@ const hasOffscreen = !!chromeApi?.offscreen;
 const url = (p: string) => browser.runtime.getURL(p as never);
 
 let offscreenReady: Promise<void> | null = null;
-let bgReady: Promise<void> | null = null;
 
 /** Create the offscreen document once (idempotent across service-worker restarts). */
 async function ensureOffscreen(): Promise<void> {
@@ -63,20 +62,34 @@ async function detectViaOffscreen(text: string, lang: string): Promise<Detection
 }
 
 /**
- * Firefox MV2: the persistent background page hosts the model directly.
- * Dynamic import so transformers is NEVER bundled into the Chrome background
- * (where it only forwards to the offscreen doc) — keeps that bundle small and
- * avoids the import.meta-in-iife warning.
+ * Firefox MV2 has no offscreen API, but its persistent background page can host
+ * the same extension page in a hidden iframe. One code path (offscreen.html)
+ * for both browsers keeps transformers OUT of the background bundle.
  */
-async function detectInBackground(text: string, lang: string): Promise<Detection[]> {
-  // Build-time guard: MANIFEST_VERSION is inlined per target, so on Chrome MV3
-  // this branch is dead-code-eliminated and transformers is dropped entirely
-  // from background.js (only the Firefox MV2 build bundles the model here).
-  if (import.meta.env.MANIFEST_VERSION !== 2) return [];
-  const ner = await import('../lib/detection/ner');
-  if (!bgReady) bgReady = ner.configureNerEnv(url('models/'), url('wasm/'));
-  await bgReady;
-  return ner.detectNer(text, lang);
+function ensureFrame(): Promise<void> {
+  if (!frameReady) {
+    frameReady = new Promise<void>((resolve, reject) => {
+      const f = document.createElement('iframe');
+      f.style.display = 'none';
+      f.src = url('offscreen.html');
+      f.onload = () => resolve();
+      f.onerror = () => { frameReady = null; reject(new Error('ner frame failed')); };
+      document.body.appendChild(f);
+    });
+  }
+  return frameReady;
+}
+let frameReady: Promise<void> | null = null;
+
+async function detect(text: string, lang: string): Promise<Detection[]> {
+  if (hasOffscreen) return detectViaOffscreen(text, lang);
+  await ensureFrame();
+  const res = (await browser.runtime.sendMessage({
+    type: NER_DETECT_OFFSCREEN,
+    text,
+    lang,
+  })) as NerDetectResponse | undefined;
+  return res?.detections ?? [];
 }
 
 export default defineBackground(() => {
@@ -127,9 +140,7 @@ export default defineBackground(() => {
     void (async () => {
       let detections: Detection[] = [];
       try {
-        detections = hasOffscreen
-          ? await detectViaOffscreen(msg.text, msg.lang)
-          : await detectInBackground(msg.text, msg.lang);
+        detections = await detect(msg.text, msg.lang);
       } catch {
         detections = [];
       }

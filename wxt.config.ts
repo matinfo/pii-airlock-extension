@@ -1,8 +1,29 @@
 import { defineConfig } from 'wxt';
+import { existsSync } from 'node:fs';
+import { copyRuntime, RUNTIME_FILES } from './scripts/fetch-ner-assets';
+
+/**
+ * onnxruntime-web references its own .wasm via `new URL(…, import.meta.url)`,
+ * which makes Vite emit a 27 MB copy into the package. We always set
+ * `wasmPaths` to the single packaged runtime (public/wasm), so drop those.
+ */
+const dropOrtWasmAssets = {
+  name: 'drop-ort-wasm-assets',
+  generateBundle(_: unknown, bundle: Record<string, unknown>) {
+    for (const name of Object.keys(bundle)) {
+      if (/ort-wasm.*\.wasm$/.test(name)) delete bundle[name];
+    }
+  },
+};
 
 export default defineConfig({
+  vite: () => ({ plugins: [dropOrtWasmAssets] }),
   modules: ['@wxt-dev/module-react'],
   hooks: {
+    // The ORT WASM runtime is packaged; build fails if it cannot be provided.
+    'build:before': async () => {
+      if (!RUNTIME_FILES.every((f) => existsSync(`public/wasm/${f}`))) await copyRuntime();
+    },
     'build:manifestGenerated': (_wxt, manifest) => {
       if (manifest.options_ui) manifest.options_ui.open_in_tab = true;
       // 'offscreen' is an MV3-only permission (Chrome/Edge). Firefox MV2 hosts
@@ -23,6 +44,11 @@ export default defineConfig({
   manifest: {
     name: 'PII Airlock',
     description: 'Automatically detects and scrubs PII from AI chat inputs before you send',
+    // 'wasm-unsafe-eval' lets the packaged ORT runtime compile its .wasm. No
+    // 'unsafe-eval', no remote script sources.
+    content_security_policy: {
+      extension_pages: "script-src 'self' 'wasm-unsafe-eval'; object-src 'self'",
+    },
     permissions: ['storage'],
     host_permissions: [
       'https://chatgpt.com/*',

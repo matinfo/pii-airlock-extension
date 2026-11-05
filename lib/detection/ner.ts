@@ -6,14 +6,13 @@
  * lexicon. The model reads grammatical context, not a name list, so it scores
  * PERSON spans ~0.9 — above compromise's 0.75 — and wins the overlap dedupe.
  *
- * Heavy: ~107MB int8 model, ~150–300ms/message on WASM. Runs OUT of the
+ * Heavy: ~170 MB int8 model, ~150–300ms/message on WASM. Runs OUT of the
  * content script (offscreen document on Chrome MV3, background on Firefox).
  * Lazy-loaded on first call; the pipeline is cached for the worker lifetime.
  *
- * Invariant #3 (no network): the host MUST set env.allowRemoteModels=false and
- * env.localModelPath to the bundled models/ dir BEFORE the first detectNer call
- * (see configureNerEnv / the offscreen entrypoint). Model files ship inside the
- * extension; nothing is ever fetched from a remote CDN.
+ * Opt-in: the model is not packaged. It is downloaded by the user's explicit
+ * choice (lib/ner-model.ts) and until then this layer is a silent no-op.
+ * Invariant #3: text never leaves the device; see configureNerEnv.
  *
  * Fail-open: any load/inference error returns [] — the regex (L1) and
  * compromise (L2) layers still run. Strict-mode fail-closed is enforced one
@@ -21,6 +20,7 @@
  */
 
 import type { Detection } from './types';
+import { NER_MODEL_ID } from '../ner-manifest';
 
 /**
  * Raw transformers.js token-classification output. transformers.js has NO
@@ -45,7 +45,7 @@ export interface NerEntity {
 /** A function that runs the model on text and returns raw tokens. */
 export type NerRunner = (text: string) => Promise<NerToken[]>;
 
-const MODEL = 'Xenova/bert-base-multilingual-cased-ner-hrl';
+const MODEL = NER_MODEL_ID;
 
 /** Map model labels → our entity-type vocabulary. MISC is intentionally dropped. */
 const LABEL_MAP: Record<string, string> = {
@@ -60,14 +60,14 @@ const MIN_SCORE = 0.5;
 let runnerPromise: Promise<NerRunner> | null = null;
 let injectedRunner: NerRunner | null = null;
 /**
- * Whether a host has pointed transformers at the bundled local model. Until
- * this is true the real pipeline is NEVER built — guarantees no remote fetch
- * (invariant #3) and keeps non-host contexts (tests, content script) as no-ops.
+ * Whether a host has configured transformers (cache-only, no network). Until
+ * this is true the real pipeline is NEVER built, which keeps non-host contexts
+ * (tests, content script) as no-ops.
  */
 let envConfigured = false;
 
 /**
- * Override the NER runner — used by tests to avoid loading the 107MB model.
+ * Override the NER runner — used by tests to avoid loading the model.
  * Pass null to reset back to the real transformers pipeline.
  */
 export function __setNerRunner(fn: NerRunner | null): void {
@@ -76,27 +76,34 @@ export function __setNerRunner(fn: NerRunner | null): void {
 }
 
 /**
- * Point transformers at the bundled local model + WASM and forbid remote
- * fetches. MUST be called by the host (offscreen/background) before the first
- * detectNer. Both dirs are extension URLs from browser.runtime.getURL():
- *   - `modelDir`  e.g. getURL('models/')   → ONNX weights + tokenizer
- *   - `wasmDir`   e.g. getURL('wasm/')     → onnxruntime-web .wasm binaries
+ * Point transformers at the user-installed model + packaged WASM runtime.
  *
- * Pinning wasmPaths is REQUIRED: transformers otherwise fetches the ORT WASM
- * from a CDN, which would breach invariant #3 (no network).
+ * Invariant #3 (reworded): the user's TEXT never leaves the device. The model
+ * file is the only thing ever fetched, once, by explicit opt-in, from a pinned
+ * revision with SHA-256 verification (lib/ner-model.ts). Inside the pipeline all
+ * network access is disabled: the model is served from the verified Cache API
+ * store and `env.fetch` rejects, so a cache miss fails open instead of
+ * reaching out. `wasm` URLs are extension URLs for the PACKAGED ORT runtime.
  */
-export async function configureNerEnv(modelDir: string, wasmDir: string): Promise<void> {
+export async function configureNerEnv(wasm: { mjs: string; wasm: string }): Promise<void> {
   const { env } = await import('@huggingface/transformers');
+  const { makeModelCache } = await import('../ner-model');
   env.allowRemoteModels = false;
-  env.allowLocalModels = true;
-  env.localModelPath = modelDir;
-  if (env.backends?.onnx?.wasm) env.backends.onnx.wasm.wasmPaths = wasmDir;
+  env.allowLocalModels = false;
+  env.useBrowserCache = false;
+  env.useCustomCache = true;
+  env.customCache = makeModelCache();
+  env.fetch = () => Promise.reject(new Error('network disabled for NER'));
+  if (env.backends?.onnx?.wasm) {
+    env.backends.onnx.wasm.wasmPaths = wasm;
+    env.backends.onnx.wasm.numThreads = 1; // no cross-origin isolation in extensions
+  }
   envConfigured = true;
 }
 
 async function buildDefaultRunner(): Promise<NerRunner> {
   const { pipeline } = await import('@huggingface/transformers');
-  const pipe = await pipeline('token-classification', MODEL);
+  const pipe = await pipeline('token-classification', MODEL, { device: 'wasm', dtype: 'q8' });
   return async (text: string) => (await pipe(text)) as unknown as NerToken[];
 }
 
@@ -188,11 +195,34 @@ export function chunkText(text: string): Array<[number, string]> {
   return chunks;
 }
 
+let installedAt = 0;
+let installed = false;
+/** Cheap gate so an un-downloaded model costs one cache lookup per few seconds. */
+async function modelInstalled(): Promise<boolean> {
+  if (installed) return true;
+  if (Date.now() - installedAt < 3000) return false;
+  installedAt = Date.now();
+  const { isInstalled } = await import('../ner-model');
+  installed = await isInstalled();
+  return installed;
+}
+
+/** Forget the cached install state (after download or removal). */
+export function resetNerState(): void {
+  installed = false;
+  installedAt = 0;
+  runnerPromise = null;
+}
+
 /** Null when no runner is available (env not configured, no test injection). */
 function getRunner(): Promise<NerRunner> | null {
   if (injectedRunner) return Promise.resolve(injectedRunner);
   if (!envConfigured) return null;
-  if (!runnerPromise) runnerPromise = buildDefaultRunner();
+  if (!runnerPromise) {
+    runnerPromise = buildDefaultRunner();
+    // Don't cache a failure: the user may install the model later.
+    runnerPromise.catch(() => { runnerPromise = null; });
+  }
   return runnerPromise;
 }
 
@@ -207,6 +237,7 @@ function getRunner(): Promise<NerRunner> | null {
 export async function detectNer(text: string, _lang: string): Promise<Detection[]> {
   if (!text.trim()) return [];
   try {
+    if (!injectedRunner && !(envConfigured && (await modelInstalled()))) return [];
     const runner = getRunner();
     if (!runner) return []; // no model configured in this context — no-op
     const run = await runner;
