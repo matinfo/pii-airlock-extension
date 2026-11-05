@@ -10,13 +10,13 @@ import { startRestore } from '../lib/restore';
 
 export default defineContentScript({
   matches: [
-    '*://chatgpt.com/*',
-    '*://chat.openai.com/*',
-    '*://claude.ai/*',
-    '*://gemini.google.com/*',
-    '*://copilot.microsoft.com/*',
-    '*://copilot.cloud.microsoft/*',
-    '*://*.perplexity.ai/*',
+    'https://chatgpt.com/*',
+    'https://chat.openai.com/*',
+    'https://claude.ai/*',
+    'https://gemini.google.com/*',
+    'https://copilot.microsoft.com/*',
+    'https://copilot.cloud.microsoft/*',
+    'https://*.perplexity.ai/*',
   ],
   main() {
     // Route Layer 3 NER to the background (→ offscreen on Chrome, direct on
