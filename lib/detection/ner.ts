@@ -96,6 +96,10 @@ export async function configureNerEnv(wasm: { mjs: string; wasm: string }): Prom
   env.useCustomCache = true;
   env.customCache = makeModelCache();
   env.fetch = () => Promise.reject(new Error('network disabled for NER'));
+  // The runtime is packaged and loaded straight from its extension URLs. The
+  // default "pre-load into cache" step would go through env.fetch above, fail,
+  // and log a scary (but harmless) warning on every start.
+  env.useWasmCache = false;
   if (env.backends?.onnx?.wasm) {
     env.backends.onnx.wasm.wasmPaths = wasm;
     env.backends.onnx.wasm.numThreads = 1; // no cross-origin isolation in extensions
