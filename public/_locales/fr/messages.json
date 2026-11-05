@@ -234,13 +234,31 @@
     "message": "Vos listes"
   },
   "optListsDesc": {
-    "message": "Stockées sur cet appareil uniquement, jamais synchronisées."
+    "message": "Valeurs dont vous décidez vous-même. Stockées sur cet appareil uniquement, jamais synchronisées."
   },
   "optAllowed": {
-    "message": "Toujours autorisés"
+    "message": "Ne jamais remplacer"
   },
   "optAlways": {
-    "message": "Toujours remplacés"
+    "message": "Toujours remplacer"
+  },
+  "optAllowedDesc": {
+    "message": "Laissées telles quelles, même détectées. Exemple : le nom de votre entreprise."
+  },
+  "optAlwaysDesc": {
+    "message": "Toujours remplacées, même non détectées. Exemple : le nom de code d’un projet."
+  },
+  "optAllowedPh": {
+    "message": "ex. Acme SA"
+  },
+  "optAlwaysPh": {
+    "message": "ex. Projet Faucon"
+  },
+  "optAdd": {
+    "message": "Ajouter"
+  },
+  "optAsKind": {
+    "message": "Remplacer comme"
   },
   "optEmpty": {
     "message": "Rien pour l’instant."

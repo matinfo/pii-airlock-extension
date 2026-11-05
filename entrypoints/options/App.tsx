@@ -1,8 +1,8 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, type FormEvent } from "react";
 import { t, entityLabel } from "~/lib/i18n";
 import { defaultDecisionFor, type Mode } from "~/lib/policy";
 import type { Decision } from "~/lib/detection/types";
-import type { Lists } from "~/lib/lists";
+import { MAX_LIST_ENTRIES, type Lists } from "~/lib/lists";
 import NerSection from "./NerSection";
 import "./App.css";
 
@@ -11,6 +11,9 @@ const ENTITY_TYPES = [
   "CRYPTO", "SECRET_KEY", "PERSON", "LOCATION", "ORG", "DATE_OF_BIRTH", "FR_NIR", "CH_AHV", "FR_SIRET",
   "FR_SIREN", "DE_TAX_ID", "DE_TAX_NUMBER", "IT_VAT_CODE",
 ];
+
+/** Kinds offered for "Always replace" (the token the value gets). */
+const DENY_TYPES = ["PERSON", "ORG", "LOCATION", "SECRET_KEY", "EMAIL_ADDRESS", "PHONE_NUMBER", "IBAN_CODE", "CREDIT_CARD"];
 
 const MODES: Mode[] = ["auto", "review", "off"];
 const cap = (m: string) => m[0]!.toUpperCase() + m.slice(1);
@@ -124,13 +127,26 @@ function App() {
         <p className="desc">{t("optListsDesc")}</p>
         <ListBox
           title={t("optAllowed")}
+          desc={t("optAllowedDesc")}
+          placeholder={t("optAllowedPh")}
           items={lists.allow}
+          onAdd={(value) => {
+            if (lists.allow.length >= MAX_LIST_ENTRIES || lists.allow.some((v) => v.toLowerCase() === value.toLowerCase())) return;
+            saveLists({ allow: [...lists.allow, value], deny: lists.deny.filter((d) => d.value.toLowerCase() !== value.toLowerCase()) });
+          }}
           onRemove={(i) => saveLists({ ...lists, allow: lists.allow.filter((_, j) => j !== i) })}
         />
         <ListBox
           title={t("optAlways")}
+          desc={t("optAlwaysDesc")}
+          placeholder={t("optAlwaysPh")}
+          types={DENY_TYPES}
           items={lists.deny.map((d) => d.value)}
           sub={lists.deny.map((d) => entityLabel(d.type))}
+          onAdd={(value, type) => {
+            if (lists.deny.length >= MAX_LIST_ENTRIES || lists.deny.some((d) => d.value.toLowerCase() === value.toLowerCase())) return;
+            saveLists({ allow: lists.allow.filter((v) => v.toLowerCase() !== value.toLowerCase()), deny: [...lists.deny, { value, type: type ?? "PERSON" }] });
+          }}
           onRemove={(i) => saveLists({ ...lists, deny: lists.deny.filter((_, j) => j !== i) })}
         />
       </section>
@@ -146,10 +162,36 @@ function App() {
   );
 }
 
-function ListBox({ title, items, sub, onRemove }: { title: string; items: string[]; sub?: string[]; onRemove: (i: number) => void }) {
+function ListBox({ title, desc, placeholder, types, items, sub, onAdd, onRemove }: {
+  title: string; desc: string; placeholder: string; types?: string[];
+  items: string[]; sub?: string[];
+  onAdd: (value: string, type?: string) => void; onRemove: (i: number) => void;
+}) {
+  const [value, setValue] = useState("");
+  const [type, setType] = useState(types?.[0] ?? "");
+  const submit = (e: FormEvent) => {
+    e.preventDefault();
+    const v = value.trim();
+    if (!v) return;
+    onAdd(v, types ? type : undefined);
+    setValue("");
+  };
   return (
     <div className="listbox">
       <h3>{title}</h3>
+      <p className="desc">{desc}</p>
+      <form className="add" onSubmit={submit}>
+        <input
+          type="text" value={value} placeholder={placeholder} maxLength={200}
+          aria-label={title} onChange={(e) => setValue(e.target.value)}
+        />
+        {types && (
+          <select value={type} aria-label={t("optAsKind")} onChange={(e) => setType(e.target.value)}>
+            {types.map((k) => <option key={k} value={k}>{entityLabel(k)}</option>)}
+          </select>
+        )}
+        <button className="btn primary" type="submit" disabled={!value.trim()}>{t("optAdd")}</button>
+      </form>
       {items.length === 0 ? (
         <p className="empty group pad">{t("optEmpty")}</p>
       ) : (

@@ -234,13 +234,31 @@
     "message": "Your lists"
   },
   "optListsDesc": {
-    "message": "Stored on this device only, never synced."
+    "message": "Values you decide about yourself. Stored on this device only, never synced."
   },
   "optAllowed": {
-    "message": "Always allowed"
+    "message": "Never replace"
   },
   "optAlways": {
-    "message": "Always replaced"
+    "message": "Always replace"
+  },
+  "optAllowedDesc": {
+    "message": "Left as typed, even when detected. Example: your company name."
+  },
+  "optAlwaysDesc": {
+    "message": "Replaced every time, even when not detected. Example: a project codename."
+  },
+  "optAllowedPh": {
+    "message": "e.g. Acme Corp"
+  },
+  "optAlwaysPh": {
+    "message": "e.g. Project Falcon"
+  },
+  "optAdd": {
+    "message": "Add"
+  },
+  "optAsKind": {
+    "message": "Replace it as"
   },
   "optEmpty": {
     "message": "Nothing here yet."

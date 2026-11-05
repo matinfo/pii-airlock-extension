@@ -64,3 +64,12 @@ footer { display: flex; align-items: center; justify-content: space-between; col
 @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
 .row.lang { align-items: flex-start; }
 .row.lang .muted { color: var(--muted); font-size: 12px; text-align: right; max-width: 55%; }
+
+.listbox { margin-top: 16px; }
+.listbox h3 { font-size: 13px; font-weight: 600; }
+.listbox .desc { margin: 2px 0 8px; }
+.add { display: flex; gap: 8px; margin-bottom: 8px; }
+.add input[type="text"] { flex: 1; min-width: 0; height: 32px; padding: 0 10px; border: 1px solid var(--border); border-radius: 8px; background: var(--bg); color: var(--fg); font: inherit; }
+.add input[type="text"]:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+.add select { min-width: 0; height: 32px; }
+.btn:disabled { opacity: .5; cursor: default; }
