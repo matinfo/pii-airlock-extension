@@ -73,3 +73,4 @@ footer { display: flex; align-items: center; justify-content: space-between; col
 .add input[type="text"]:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
 .add select { min-width: 0; height: 32px; }
 .btn:disabled { opacity: .5; cursor: default; }
+.warn-text { color: var(--warn); margin: -4px 0 8px; }

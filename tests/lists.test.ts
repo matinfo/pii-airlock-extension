@@ -1,5 +1,5 @@
 import { describe, it, expect, afterEach } from 'bun:test';
-import { setLists, EMPTY_LISTS } from '../lib/lists';
+import { setLists, getLists, cleanListValue, denyHits, EMPTY_LISTS } from '../lib/lists';
 import { analyze } from '../lib/detection/engine';
 
 afterEach(() => setLists(EMPTY_LISTS));
@@ -31,5 +31,24 @@ describe('allow / deny lists', () => {
     setLists({ allow: Array.from({ length: 900 }, (_, i) => `v${i}`) });
     // not asserting internals: just must not throw and must be bounded
     expect(true).toBe(true);
+  });
+
+  it('refuses values that would match everywhere', () => {
+    for (const bad of ['', ' ', '.', ',,', 'a', '—', '\n\t', 'x'.repeat(201), 42, null]) {
+      expect(cleanListValue(bad)).toBeNull();
+    }
+    expect(cleanListValue('  Project   Falcon ')).toBe('Project Falcon');
+    expect(cleanListValue('Al')).toBe('Al');
+  });
+
+  it('ignores invalid entries already in storage (old or tampered)', () => {
+    setLists({
+      allow: ['.', 'Acme Corp'],
+      deny: [{ value: '.', type: 'PERSON' }, { value: 'Falcon', type: 'ORG' }, { value: 'x', type: 'ORG' }],
+    });
+    expect(getLists().allow).toEqual(['acme corp']);
+    expect(getLists().deny).toEqual([{ value: 'Falcon', type: 'ORG' }]);
+    expect(denyHits('Hello. Falcon.')).toHaveLength(1); // the full stop is not replaced
+    setLists(EMPTY_LISTS);
   });
 });

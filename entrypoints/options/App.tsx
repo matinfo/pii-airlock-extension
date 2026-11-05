@@ -2,7 +2,7 @@ import { useEffect, useState, type FormEvent } from "react";
 import { t, entityLabel } from "~/lib/i18n";
 import { defaultDecisionFor, type Mode } from "~/lib/policy";
 import type { Decision } from "~/lib/detection/types";
-import { MAX_LIST_ENTRIES, type Lists } from "~/lib/lists";
+import { MAX_LIST_ENTRIES, MAX_VALUE_LENGTH, cleanListValue, type Lists } from "~/lib/lists";
 import NerSection from "./NerSection";
 import "./App.css";
 
@@ -171,7 +171,7 @@ function ListBox({ title, desc, placeholder, types, items, sub, onAdd, onRemove 
   const [type, setType] = useState(types?.[0] ?? "");
   const submit = (e: FormEvent) => {
     e.preventDefault();
-    const v = value.trim();
+    const v = cleanListValue(value);
     if (!v) return;
     onAdd(v, types ? type : undefined);
     setValue("");
@@ -182,7 +182,7 @@ function ListBox({ title, desc, placeholder, types, items, sub, onAdd, onRemove 
       <p className="desc">{desc}</p>
       <form className="add" onSubmit={submit}>
         <input
-          type="text" value={value} placeholder={placeholder} maxLength={200}
+          type="text" value={value} placeholder={placeholder} maxLength={MAX_VALUE_LENGTH}
           aria-label={title} onChange={(e) => setValue(e.target.value)}
         />
         {types && (
@@ -190,8 +190,9 @@ function ListBox({ title, desc, placeholder, types, items, sub, onAdd, onRemove 
             {types.map((k) => <option key={k} value={k}>{entityLabel(k)}</option>)}
           </select>
         )}
-        <button className="btn primary" type="submit" disabled={!value.trim()}>{t("optAdd")}</button>
+        <button className="btn primary" type="submit" disabled={!cleanListValue(value)}>{t("optAdd")}</button>
       </form>
+      {value.trim() !== "" && !cleanListValue(value) && <p className="hint warn-text" role="status">{t("optInvalid")}</p>}
       {items.length === 0 ? (
         <p className="empty group pad">{t("optEmpty")}</p>
       ) : (

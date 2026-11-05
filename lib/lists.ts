@@ -21,15 +21,31 @@ export interface Lists {
 export const EMPTY_LISTS: Lists = { allow: [], deny: [] };
 export const MAX_LIST_ENTRIES = 500;
 
+export const MAX_VALUE_LENGTH = 200;
+
+/**
+ * Normalise a user-typed list value, or return null if it must be refused:
+ * collapses whitespace, needs 2..200 chars and at least one letter or digit.
+ * Punctuation-only or one-letter entries would otherwise match (and replace)
+ * every "." or standalone "a" in the user's messages.
+ */
+export function cleanListValue(raw: unknown): string | null {
+  if (typeof raw !== 'string') return null;
+  const v = raw.replace(/\s+/g, ' ').trim();
+  if (v.length < 2 || v.length > MAX_VALUE_LENGTH) return null;
+  return /[\p{L}\p{N}]/u.test(v) ? v : null;
+}
+
 let _lists: Lists = EMPTY_LISTS;
 
 const norm = (v: string) => v.normalize('NFKC').trim().toLowerCase();
 
 export function setLists(l: Partial<Lists> | undefined): void {
   _lists = {
-    allow: [...new Set((l?.allow ?? []).map(norm).filter(Boolean))].slice(0, MAX_LIST_ENTRIES),
+    allow: [...new Set((l?.allow ?? []).map((v) => cleanListValue(v)).filter((v): v is string => !!v).map(norm))].slice(0, MAX_LIST_ENTRIES),
     deny: (l?.deny ?? [])
-      .filter((e) => e && typeof e.value === 'string' && e.value.trim() && typeof e.type === 'string')
+      .filter((e) => e && typeof e.type === 'string' && cleanListValue(e.value))
+      .map((e) => ({ type: e.type, value: cleanListValue(e.value)! }))
       .slice(0, MAX_LIST_ENTRIES),
   };
 }

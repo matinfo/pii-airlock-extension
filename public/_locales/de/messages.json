@@ -260,6 +260,9 @@
   "optAsKind": {
     "message": "Ersetzen als"
   },
+  "optInvalid": {
+    "message": "Mindestens 2 Zeichen, mit einem Buchstaben oder einer Ziffer."
+  },
   "optEmpty": {
     "message": "Noch nichts vorhanden."
   },

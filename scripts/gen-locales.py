@@ -93,6 +93,7 @@ T = {
  'optAlwaysPh': ('e.g. Project Falcon', 'ex. Projet Faucon', 'z. B. Projekt Falke'),
  'optAdd': ('Add', 'Ajouter', 'Hinzufügen'),
  'optAsKind': ('Replace it as', 'Remplacer comme', 'Ersetzen als'),
+ 'optInvalid': ('Needs at least 2 characters, including a letter or a digit.', 'Au moins 2 caractères, dont une lettre ou un chiffre.', 'Mindestens 2 Zeichen, mit einem Buchstaben oder einer Ziffer.'),
  'optEmpty': ('Nothing here yet.', 'Rien pour l’instant.', 'Noch nichts vorhanden.'),
  'optRemove': ('Remove', 'Retirer', 'Entfernen'),
  'optReset': ('Reset settings', 'Réinitialiser les réglages', 'Einstellungen zurücksetzen'),

@@ -260,6 +260,9 @@
   "optAsKind": {
     "message": "Replace it as"
   },
+  "optInvalid": {
+    "message": "Needs at least 2 characters, including a letter or a digit."
+  },
   "optEmpty": {
     "message": "Nothing here yet."
   },
