@@ -1,179 +1,65 @@
-* {
-  box-sizing: border-box;
-  margin: 0;
-  padding: 0;
+:root {
+  color-scheme: light dark;
+  --bg: #ffffff;
+  --fg: #171717;
+  --muted: #6b6b6b;
+  --border: #e5e5e5;
+  --hover: #f4f4f5;
+  --accent: #171717;
+  --accent-fg: #ffffff;
+  --ok: #15803d;
+  --warn: #b45309;
 }
-body {
-  font-family:
-    system-ui,
-    -apple-system,
-    sans-serif;
-  background: #ffffff;
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #212121;
+    --fg: #ececec;
+    --muted: #a1a1a1;
+    --border: #3a3a3a;
+    --hover: #2c2c2c;
+    --accent: #ececec;
+    --accent-fg: #171717;
+    --ok: #4ade80;
+    --warn: #fbbf24;
+  }
 }
-.popup {
-  width: 280px;
-  padding: 16px;
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-header {
-  display: flex;
-  align-items: center;
-  flex-direction: column;
-  gap: 8px;
-}
-header .logo {
-  width: 220px;
-  height: auto;
-  object-fit: contain;
-  flex: 1;
-}
-header h1 {
-  font-size: 16px;
-  font-weight: 700;
-  color: #1f2937;
-  flex: 1;
-}
-.status-dot {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  display: inline-block;
-  flex-shrink: 0;
-}
-.protection-status {
-  display: flex;
-  align-items: center;
-  gap: 7px;
-  font-size: 12px;
-  font-weight: 600;
-  padding: 5px 12px;
-  border-radius: 20px;
-  align-self: center;
-}
-.protection-status.on {
-  background: #dcfce7;
-  color: #15803d;
-}
-.protection-status.off {
-  background: #f3f4f6;
-  color: #6b7280;
-}
-.protection-status.on .status-dot {
-  background: #22c55e;
-}
-.protection-status.off .status-dot {
-  background: #9ca3af;
-}
-.site-status {
-  background: #f3f4f6;
-  border-radius: 8px;
-  padding: 8px 12px;
-  font-size: 13px;
-}
-.site-on {
-  color: #065f46;
-}
-.site-off {
-  color: #92400e;
-}
-.mode-row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  font-size: 13px;
-  color: #374151;
-}
-.mode-btn {
-  border: none;
-  border-radius: 20px;
-  padding: 5px 14px;
-  min-height: 26px;
-  font-size: 12px;
-  font-weight: 700;
-  cursor: pointer;
-  transition:
-    filter 0.15s,
-    transform 0.1s;
-}
-.mode-btn:hover {
-  filter: brightness(0.92);
-  transform: scale(1.04);
-}
-.mode-btn:active {
-  filter: brightness(0.85);
-  transform: scale(0.97);
-}
-.mode-btn.strict {
-  background: #dbeafe;
-  color: #1d4ed8;
-}
-.mode-btn.permissive {
-  background: #fef3c7;
-  color: #92400e;
-}
-.stats {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  font-size: 12px;
-  color: #6b7280;
-  border: 1px solid #e5e7eb;
-  border-radius: 8px;
-  padding: 8px 12px;
-}
-.stat-value {
-  font-weight: 700;
-  color: #1f2937;
-  font-size: 16px;
-}
-.actions {
-  display: flex;
-  gap: 8px;
-}
-.actions button {
-  border: none;
-  border-radius: 8px;
-  padding: 7px;
-  font-size: 12px;
-  font-weight: 600;
-  cursor: pointer;
-  transition:
-    filter 0.15s,
-    transform 0.1s;
-}
-.actions button:hover {
-  filter: brightness(0.92);
-  transform: scale(1.03);
-}
-.actions button:active {
-  filter: brightness(0.82);
-  transform: scale(0.97);
-}
-.panic-btn {
-  background: #fee2e2;
-  color: #991b1b;
-  flex: 0 0 60%;
-}
-.options-btn {
-  background: #e5e7eb;
-  color: #374151;
-  flex: 1;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 4px;
-}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { background: var(--bg); color: var(--fg); font: 13px/1.45 system-ui, -apple-system, "Segoe UI", sans-serif; }
+button { font: inherit; color: inherit; cursor: pointer; }
+button:focus-visible, input:focus-visible + *, .seg label:has(input:focus-visible) { outline: 2px solid var(--accent); outline-offset: 2px; }
 
-.options-btn span {
-  font-size: 200%;
-  line-height: 0;
-  margin-top: -2px;
-}
-footer .mode-desc {
-  font-size: 11px;
-  color: #9ca3af;
-  display: block;
-  text-align: center;
-}
+.popup { width: 300px; padding: 14px; display: flex; flex-direction: column; gap: 12px; }
+header { display: flex; align-items: center; justify-content: space-between; }
+.brand { display: inline-flex; align-items: center; gap: 6px; font-weight: 600; font-size: 14px; }
+.link { background: none; border: 0; border-radius: 6px; padding: 4px 6px; color: var(--muted); font-size: 12px; }
+.link:hover { color: var(--fg); background: var(--hover); }
+
+.status { display: flex; gap: 10px; align-items: flex-start; padding: 10px 12px; border: 1px solid var(--border); border-radius: 10px; }
+.status .dot { width: 8px; height: 8px; margin-top: 5px; border-radius: 50%; background: var(--muted); flex: none; }
+.status.ok .dot { background: var(--ok); }
+.status.warn .dot { background: var(--warn); }
+.status-text { font-weight: 500; }
+.status-sub { color: var(--muted); font-size: 12px; }
+
+.switch-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.switch { width: 36px; height: 20px; border-radius: 999px; border: 0; background: var(--border); position: relative; flex: none; transition: background .12s; }
+.switch[aria-checked="true"] { background: var(--accent); }
+.switch .knob { position: absolute; top: 2px; left: 2px; width: 16px; height: 16px; border-radius: 50%; background: var(--bg); transition: transform .12s; }
+.switch[aria-checked="true"] .knob { transform: translateX(16px); background: var(--accent-fg); }
+
+.modes { border: 0; }
+.modes legend { font-size: 12px; color: var(--muted); margin-bottom: 6px; }
+.seg { display: grid; grid-template-columns: repeat(3, 1fr); border: 1px solid var(--border); border-radius: 8px; padding: 2px; gap: 2px; }
+.seg label { text-align: center; padding: 5px 0; border-radius: 6px; cursor: pointer; font-weight: 500; }
+.seg label:hover { background: var(--hover); }
+.seg label.on { background: var(--accent); color: var(--accent-fg); }
+.seg input { position: absolute; opacity: 0; pointer-events: none; }
+.hint { margin-top: 6px; color: var(--muted); font-size: 12px; }
+
+.btn { height: 32px; border-radius: 8px; border: 1px solid var(--border); background: transparent; font-weight: 500; }
+.btn:hover:not(:disabled) { background: var(--hover); }
+.btn:disabled { opacity: .5; cursor: default; }
+
+footer { display: flex; align-items: center; justify-content: space-between; color: var(--muted); font-size: 12px; padding-top: 10px; border-top: 1px solid var(--border); }
+
+@media (prefers-reduced-motion: reduce) { .switch, .knob { transition: none; } }

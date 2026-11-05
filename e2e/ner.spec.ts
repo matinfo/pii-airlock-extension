@@ -10,7 +10,7 @@ import { join } from 'node:path';
 
 const MODEL_DIR = '.cache/ner-model';
 const NAME = 'Oluwaseun Adeyemi-Okonkwo';
-const AUTO = { mode: 'strict', overrides: { PERSON: 'auto_scrub' } };
+const AUTO = { mode: 'auto', overrides: {} };
 
 async function extensionId(h: { context: import('@playwright/test').BrowserContext }) {
   let [sw] = h.context.serviceWorkers();

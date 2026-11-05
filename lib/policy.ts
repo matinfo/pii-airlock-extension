@@ -144,6 +144,13 @@ export function decisionFor(d: Detection): Decision {
   return decisionFromMode(_settings.mode);
 }
 
+/** What the mode alone would do for an entity type (ignores overrides). */
+export function defaultDecisionFor(entityType: string, mode: Mode): Decision {
+  if (mode === 'off') return 'allow';
+  if (NOTIFY_ONLY.has(entityType)) return 'notify';
+  return decisionFromMode(mode);
+}
+
 /** True when this detection must be replaced before the text may leave. */
 export function mustScrub(d: Detection): boolean {
   const dec = decisionFor(d);

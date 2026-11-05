@@ -453,14 +453,25 @@ class Shield {
     }
     if (this.panel) {
       const w = this.panel.offsetWidth;
-      const chipTop = this.chip ? parseFloat(this.chip.style.top) : r.top - chipH - gap;
       const left = Math.min(Math.max(gap, r.right - w - 4), vw - w - gap);
-      Object.assign(this.panel.style, { left: `${left}px`, bottom: `${vh - chipTop + 6}px`, top: 'auto' });
+      const chipTop = this.chip ? parseFloat(this.chip.style.top) : r.top - chipH - gap;
+      const above = chipTop - gap;
+      const below = vh - r.bottom - 2 * gap;
+      // Prefer above the composer (chat boxes sit at the bottom); flip when the
+      // composer is near the top of the viewport.
+      const up = above >= Math.min(this.panel.scrollHeight, 460) || above >= below;
+      this.panel.style.maxHeight = `${Math.max(160, Math.min(460, (up ? above : below) - gap))}px`;
+      Object.assign(this.panel.style, up
+        ? { left: `${left}px`, bottom: `${vh - chipTop + 6}px`, top: 'auto' }
+        : { left: `${left}px`, top: `${r.bottom + gap}px`, bottom: 'auto' });
     }
     if (this.toastEl) {
       const w = this.toastEl.offsetWidth;
       const left = Math.min(Math.max(gap, r.left + (r.width - w) / 2), vw - w - gap);
-      Object.assign(this.toastEl.style, { left: `${left}px`, bottom: `${vh - r.top + gap}px`, top: 'auto' });
+      const h = this.toastEl.offsetHeight;
+      Object.assign(this.toastEl.style, r.top - h - gap >= 0
+        ? { left: `${left}px`, bottom: `${vh - r.top + gap}px`, top: 'auto' }
+        : { left: `${left}px`, top: `${r.bottom + gap}px`, bottom: 'auto' });
     }
   }
 }

@@ -5,7 +5,7 @@
 import { test, expect, type Harness } from './fixtures';
 
 const EMAIL = 'jane.roe@example.com';
-const AUTO = { mode: 'strict', overrides: { EMAIL_ADDRESS: 'auto_scrub', PERSON: 'auto_scrub' } };
+const AUTO = { mode: 'auto', overrides: {} };
 
 async function type(h: Harness, text: string) {
   await h.page.click('#prompt-textarea');
@@ -16,20 +16,30 @@ function noRaw(sent: string[]) {
   for (const body of sent) expect(body).not.toContain(EMAIL);
 }
 
-test('Enter is intercepted before ProseMirror sends (default policy: dialog, nothing sent)', async ({ h }) => {
+test('default (auto): Enter is intercepted before ProseMirror, a token is sent, never the email', async ({ h }) => {
   await type(h, `mail me at ${EMAIL} please`);
   await h.page.keyboard.press('Enter');
-  noRaw(await none(h));
-  expect(h.sent.length).toBe(0);
+  await expect.poll(() => h.sent.length, { timeout: 8000 }).toBe(1);
+  noRaw(h.sent);
+  expect(h.sent[0]).toMatch(/<EMAIL_ADDRESS_\d+>/);
 });
 
-test('Esc closes the dialog and still nothing was sent', async ({ h }) => {
+test('review mode: Esc cancels, nothing is sent', async ({ h }) => {
+  await h.setSettings({ mode: 'review' });
   await type(h, `mail ${EMAIL}`);
   await h.page.keyboard.press('Enter');
   await h.page.waitForTimeout(1000);
   await h.page.keyboard.press('Escape');
   noRaw(await none(h));
   expect(h.sent.length).toBe(0);
+});
+
+test('mode off: the guard steps aside and the page sends as usual', async ({ h }) => {
+  await h.setSettings({ mode: 'off' });
+  await type(h, `mail ${EMAIL}`);
+  await h.page.keyboard.press('Enter');
+  await expect.poll(() => h.sent.length, { timeout: 8000 }).toBe(1);
+  expect(h.sent[0]).toContain(EMAIL);
 });
 
 test('auto-scrub: Enter sends a token, never the email', async ({ h }) => {
@@ -73,8 +83,9 @@ test('A3: edit-message box is guarded', async ({ h }) => {
   await h.page.fill('#edit', `contact ${EMAIL}`);
   await h.page.focus('#edit');
   await h.page.keyboard.press('Enter');
-  noRaw(await none(h));
-  expect(h.sent.length).toBe(0);
+  await expect.poll(() => h.sent.length, { timeout: 8000 }).toBe(1);
+  noRaw(h.sent);
+  expect(h.sent[0]).toMatch(/<EMAIL_ADDRESS_\d+>/);
 });
 
 test('A8: triple Enter sends once', async ({ h }) => {
