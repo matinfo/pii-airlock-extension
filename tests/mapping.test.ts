@@ -56,6 +56,16 @@ describe('BrowserMapping', () => {
       expect(out).toBe('keep <UNKNOWN_TOKEN_99> as-is');
     });
 
+    it('restores square-bracket echoes (ChatGPT rewrites <X_1> as [X_1])', () => {
+      m.tokenFor('PERSON', 'Jean Dupont');
+      expect(m.restore('Hi [PERSON_1], and <PERSON_1>')).toBe('Hi Jean Dupont, and Jean Dupont');
+    });
+
+    it('leaves unknown square-bracket text alone', () => {
+      m.tokenFor('PERSON', 'Jean Dupont');
+      expect(m.restore('see [PERSON_7] and [NOTE_1]')).toBe('see [PERSON_7] and [NOTE_1]');
+    });
+
     it('restores same token appearing twice', () => {
       m.tokenFor('EMAIL_ADDRESS', 'x@y.com');
       const out = m.restore('<EMAIL_ADDRESS_1> and <EMAIL_ADDRESS_1>');

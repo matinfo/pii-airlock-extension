@@ -86,3 +86,9 @@ test('rescans the page when a token is minted after the text appeared', async ()
   expect(document.body.textContent).toBe('Jean Dupont');
   stop();
 });
+
+test('restores the [TOKEN_N] form models echo back', () => {
+  document.body.innerHTML = '<p>Hi [PERSON_1], mail [EMAIL_ADDRESS_1]. Email address: [EMAIL_ADDRESS_1]</p>';
+  restoreTree(document.body, mapped());
+  expect(document.body.textContent).toBe('Hi Jean Dupont, mail jane@example.com. Email address: jane@example.com');
+});

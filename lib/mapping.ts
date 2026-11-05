@@ -12,7 +12,9 @@
  * Cleared on explicit panic-clear from the popup.
  */
 
-const TOKEN_RE = /<([A-Z][A-Z0-9_]*)_(\d+)>/g;
+// Models often echo `<PERSON_1>` as `[PERSON_1]`, so both bracket styles are
+// accepted on the way back; lookup always uses the canonical `<…>` form.
+const TOKEN_RE = /<([A-Z][A-Z0-9_]*_\d+)>|\[([A-Z][A-Z0-9_]*_\d+)\]/g;
 
 export class BrowserMapping {
   private valueToToken = new Map<string, string>(); // "john@x.com" → "<EMAIL_ADDRESS_1>"
@@ -66,7 +68,8 @@ export class BrowserMapping {
 
   /** Replace every known token in `text` with its original value. */
   restore(text: string): string {
-    return text.replace(TOKEN_RE, (match) => this.tokenToValue.get(match) ?? match);
+    return text.replace(TOKEN_RE, (match, angle?: string, square?: string) =>
+      this.tokenToValue.get(`<${angle ?? square}>`) ?? match);
   }
 
   /**

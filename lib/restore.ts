@@ -11,7 +11,7 @@
  */
 import type { BrowserMapping } from './mapping';
 
-const QUICK = /<[A-Z][A-Z0-9_]*_\d+>/;
+const QUICK = /[<[][A-Z][A-Z0-9_]*_\d+[>\]]/;
 const SKIP_TAGS = new Set(['SCRIPT', 'STYLE', 'TEXTAREA', 'INPUT', 'NOSCRIPT']);
 
 function excluded(node: Node): boolean {
