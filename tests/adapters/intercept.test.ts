@@ -47,6 +47,7 @@ afterEach(() => { while (guards.length) guards.pop()!.destroy(); });
 
 beforeEach(() => {
   document.body.innerHTML = '';
+  document.documentElement.lang = '';
   applySettings({ mode: 'auto', overrides: {}, siteOff: false, pausedUntil: 0 });
 });
 
@@ -512,7 +513,8 @@ test('an unrelated button elsewhere is not hijacked (wider scope stays safe)', a
 
 // --- safety net: send buttons we cannot recognise ---------------------------
 
-function unknownButtonPage(extra = '', text = 'my mail jane@example.com') {
+function unknownButtonPage(extra = '', text = 'my mail jane@example.com', lang = 'de') {
+  document.documentElement.lang = lang;
   document.body.innerHTML = `<div><div><div><div>
     <div id="ed" contenteditable="true">${text}</div></div></div>
     <div><button id="go" aria-label="???"></button>${extra}</div></div></div>`;
@@ -579,4 +581,31 @@ test('a button outside the composer container is left alone', async () => {
   await settle(3);
   expect(clicks).toBe(1);
   expect(f.composer.textContent).toContain('jane@example.com');
+});
+
+test('the unknown-button net is off in English and French (verified languages)', async () => {
+  for (const lang of ['en', 'en-GB', 'fr', 'fr-CH']) {
+    const f = unknownButtonPage('', 'my mail jane@example.com', lang);
+    guard(f.adapter);
+    f.composer.dispatchEvent(new Event('input', { bubbles: true }));
+    let clicks = 0;
+    document.getElementById('go')!.addEventListener('click', () => clicks++);
+    document.getElementById('go')!.click();
+    await settle(3);
+    expect(clicks).toBe(1);                                        // click reached the page untouched
+    expect(f.composer.textContent).toContain('jane@example.com');  // nothing second-guessed
+    while (guards.length) guards.pop()!.destroy();
+  }
+});
+
+test('the net applies in other languages, taken from <html lang>', async () => {
+  for (const lang of ['de', 'es-ES', 'it', 'pt-BR', 'nl', 'ja']) {
+    const f = unknownButtonPage('', 'my mail jane@example.com', lang);
+    guard(f.adapter);
+    f.composer.dispatchEvent(new Event('input', { bubbles: true }));
+    document.getElementById('go')!.click();
+    await settle();
+    expect(f.composer.textContent).not.toContain('jane@example.com');
+    while (guards.length) guards.pop()!.destroy();
+  }
 });

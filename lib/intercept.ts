@@ -72,6 +72,15 @@ const SEND_LABEL_RE =
   /\b(send|submit|ask|envoyer|envoi|senden|absenden|abschicken|enviar|mandar|invia|inviare|manda|verzenden|versturen)\b/i;
 const MAX_RETRIES = 3;
 
+/** Interface languages whose send buttons were verified live; the unknown-button net skips them. */
+const WELL_TESTED_LANGS = new Set(['en', 'fr']);
+
+/** Language of the chat page (its own <html lang>, else the browser's), e.g. "fr". */
+export function pageLanguage(): string {
+  const raw = document.documentElement.lang || (typeof navigator !== 'undefined' ? navigator.language : '') || 'en';
+  return raw.toLowerCase().split(/[-_]/)[0] || 'en';
+}
+
 /** Resolve the editable element an event came from, or null. */
 function editableFrom(e: Event): HTMLElement | null {
   let rich: HTMLElement | null = null;
@@ -238,6 +247,9 @@ export class SendGuard {
     '[aria-haspopup]:not([aria-haspopup="false"]), [aria-expanded], [aria-pressed], [role="menuitem"], [role="tab"], [role="switch"], [role="combobox"], a[href]';
 
   private maybeUnknownSend(btn: HTMLElement, composer: HTMLElement): boolean {
+    // A fallback for languages we have not verified; in English and French the
+    // known-button path is trusted, so ordinary buttons are never second-guessed.
+    if (WELL_TESTED_LANGS.has(pageLanguage())) return false;
     if (btn.matches(SendGuard.NOT_SEND) || btn.closest(SendGuard.NOT_SEND)) return false;
     const scope = composerScope(composer);
     if (scope === document || !scope.contains(btn) || composer.contains(btn)) return false;
