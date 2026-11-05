@@ -81,7 +81,9 @@ export function sampleTheme(anchor: Element | null, sendButton?: Element | null)
   const bg = backdrop(anchor);
   const text = anchor ?? document.body;
   const fg = parseColor(getComputedStyle(text).color) ?? (luminance(bg) < 0.4 ? [236, 236, 236, 1] as RGBA : [32, 33, 35, 1] as RGBA);
-  const font = getComputedStyle(document.body).fontFamily || 'system-ui, sans-serif';
+  // Composer first: some apps (Gemini) leave <body> on the browser default serif and
+  // set the real font on the app's own elements.
+  const font = getComputedStyle(text).fontFamily || getComputedStyle(document.body).fontFamily || 'system-ui, sans-serif';
 
   let accent: RGBA = fg;
   let accentFg: RGBA = bg;
