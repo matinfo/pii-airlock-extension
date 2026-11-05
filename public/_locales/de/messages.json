@@ -275,6 +275,9 @@
   "optResetBody": {
     "message": "Schutzmodus, Auswahl pro Datentyp und „Nach dem Senden bestätigen“ werden auf die Standardwerte gesetzt. Ihre Listen und das Namensmodell bleiben erhalten."
   },
+  "badgeNoComposer": {
+    "message": "PII Airlock: kein Eingabefeld auf dieser Seite gefunden. HIER NICHT geschützt."
+  },
   "optEmpty": {
     "message": "Noch nichts vorhanden."
   },

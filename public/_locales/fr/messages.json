@@ -275,6 +275,9 @@
   "optResetBody": {
     "message": "Le mode, les choix par type et « Confirmer après l’envoi » reviennent aux valeurs par défaut. Vos listes et le modèle de noms sont conservés."
   },
+  "badgeNoComposer": {
+    "message": "PII Airlock : aucune zone de saisie trouvée sur cette page. PAS protégé ici."
+  },
   "optEmpty": {
     "message": "Rien pour l’instant."
   },

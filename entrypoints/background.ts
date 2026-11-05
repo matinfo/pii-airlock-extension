@@ -5,6 +5,7 @@ import {
 } from '../lib/detection/ner-messages';
 import type { Detection } from '../lib/detection/types';
 import { MSG } from '../lib/messages';
+import { t } from '../lib/i18n';
 
 /**
  * Minimal typing for the MV3 offscreen APIs (not in webextension-polyfill).
@@ -125,10 +126,10 @@ export default defineBackground(() => {
         void browser.action.setBadgeBackgroundColor({ tabId, color: '#d97706' });
         void browser.action.setTitle({
           tabId,
-          title: 'PII Airlock: no chat box found on this page. NOT protected here.',
+          title: t('badgeNoComposer'),
         });
       } else {
-        void browser.action.setTitle({ tabId, title: 'PII Airlock' });
+        void browser.action.setTitle({ tabId, title: t('appName') });
       }
     }
     return false;

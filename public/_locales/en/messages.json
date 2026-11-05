@@ -275,6 +275,9 @@
   "optResetBody": {
     "message": "Protection mode, per-kind choices and “Confirm after sending” go back to their defaults. Your lists and the names model are kept."
   },
+  "badgeNoComposer": {
+    "message": "PII Airlock: no chat box found on this page. NOT protected here."
+  },
   "optEmpty": {
     "message": "Nothing here yet."
   },
