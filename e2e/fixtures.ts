@@ -6,7 +6,7 @@ import { mkdtempSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
-const EXT = resolve('.output/chrome-mv3');
+const EXT = resolve('.output-e2e/chrome-mv3');
 const SITE = 'https://chatgpt.com';
 
 const PAGE = `<!doctype html><html><body>

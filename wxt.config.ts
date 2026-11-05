@@ -16,7 +16,9 @@ const dropOrtWasmAssets = {
   },
 };
 
+// The e2e build bakes in a loopback model host; keep it out of the real output dir.
 export default defineConfig({
+  outDir: process.env.WXT_NER_HOST ? '.output-e2e' : '.output',
   vite: () => ({ plugins: [dropOrtWasmAssets] }),
   modules: ['@wxt-dev/module-react'],
   hooks: {
