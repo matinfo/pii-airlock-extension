@@ -20,8 +20,11 @@ function docText(view: EditorView): string {
 async function send(view: EditorView) {
   const text = docText(view);
   if (!text.trim()) return;
-  await fetch('/api/send', { method: 'POST', body: text });
+  // Clear first, like real chat UIs (optimistic): clearing after the fetch
+  // resolves leaves the old text in the box on a slow runner, and a repeat
+  // Enter then legitimately sends it again (A8 flake).
   view.updateState(EditorState.create({ schema, plugins: view.state.plugins }));
+  await fetch('/api/send', { method: 'POST', body: text });
 }
 
 function makeView(): EditorView {
