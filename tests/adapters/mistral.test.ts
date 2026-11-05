@@ -20,3 +20,10 @@ test('finds the ProseMirror composer, not the hidden submit button', () => {
   expect(c.classList.contains('ProseMirror')).toBe(true);
   expect(mistralAdapter.findSendButton(c)).toBeNull();
 });
+
+test('finds the visible Send button (type=submit, aria-label=Send) once text is typed', () => {
+  document.body.innerHTML = HTML.replace('<button aria-label="Voice Mode" type="button"></button>',
+    '<button aria-label="Send" aria-disabled="false" type="submit"></button>');
+  const c = mistralAdapter.findComposer()!;
+  expect(mistralAdapter.findSendButton(c)?.getAttribute('aria-label')).toBe('Send');
+});
