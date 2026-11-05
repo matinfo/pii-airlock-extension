@@ -56,6 +56,12 @@ interface Ctx {
 }
 
 const EDITABLE_SEL = '[contenteditable]:not([contenteditable="false"])';
+/**
+ * Editables that are plumbing, not composers. Quill (Gemini) parks focus in a
+ * hidden `.ql-clipboard` while it processes a paste and fires `input` there; that
+ * event would hijack the live scan and read an empty node, hiding the chip.
+ */
+const PLUMBING_SEL = '.ql-clipboard';
 const SEND_LABEL_RE = /\b(send|submit|envoyer|senden|invia|enviar|ask)\b/i;
 const MAX_RETRIES = 3;
 
@@ -65,6 +71,7 @@ function editableFrom(e: Event): HTMLElement | null {
   for (const n of e.composedPath()) {
     if (!(n instanceof HTMLElement)) continue;
     if (n.id === UI_HOST_ID) return null; // our own UI
+    if (n.matches(PLUMBING_SEL)) return null;
     if (n instanceof HTMLTextAreaElement) return rich ?? n;
     if (n.matches(EDITABLE_SEL)) rich = n; // keep climbing → outermost editing host
   }
@@ -233,6 +240,9 @@ export class SendGuard {
 
   private scheduleScan(editable: HTMLElement | null): void {
     if (!editable) return;
+    // While a send is being evaluated/performed our own writes fire input events;
+    // a scan then would re-draw the chip over a message that is already leaving.
+    if (this._busy || this._sending) return;
     this.liveEditable = editable;
     clearTimeout(this.scanTimer);
     this.scanTimer = setTimeout(() => void this.scan(editable), 350);
@@ -259,7 +269,7 @@ export class SendGuard {
     const text = this.read(editable);
     if (!text.trim()) { this.excluded.clear(); shield.render({ items: [], notices: [], mode: 'auto', paused: false }); return; }
     const r = await this.analyze(text, { skipNer: true });
-    if (seq !== this.scanSeq || r.error) return;
+    if (seq !== this.scanSeq || r.error || this._busy) return;
     shield.render(this.chipState(r.detections));
   }
 
@@ -458,6 +468,9 @@ export class SendGuard {
       .map((d) => this.toItem(d, this.mapping.tokenFor(d.entityType, d.value)));
     shield.toast(items, this.nerNote);
     if (clear) {
+      // Drop any scan still pending or in flight: it describes the sent message.
+      clearTimeout(this.scanTimer);
+      this.scanSeq++;
       this.excluded.clear();
       shield.render({ items: [], notices: [], mode: 'auto', paused: false });
     }

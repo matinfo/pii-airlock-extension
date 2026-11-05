@@ -385,3 +385,38 @@ test('A12: a wrong-scope "Send" button elsewhere on the page is not hijacked', a
   expect(clicked).toBe(true);
   expect(f.sends.length).toBe(0);
 });
+
+test("Quill's hidden .ql-clipboard input after a paste does not hijack the live scan (gemini chip)", async () => {
+  const f = makeFake('write to jane@example.com');
+  const clip = document.createElement('div'); // Quill parks focus + fires input here on paste
+  clip.className = 'ql-clipboard';
+  clip.setAttribute('contenteditable', 'true');
+  document.body.appendChild(clip);
+  guard(f.adapter);
+
+  f.composer.dispatchEvent(new Event('paste', { bubbles: true, cancelable: true }));
+  clip.dispatchEvent(new Event('input', { bubbles: true }));
+  await new Promise((r) => setTimeout(r, 600));
+  await settle(3);
+
+  expect(document.getElementById('pii-airlock-ui')).not.toBeNull(); // chip rendered
+});
+
+test('a live scan pending at send time does not bring the chip back after send', async () => {
+  const f = makeFake('write to jane@example.com');
+  const { shield } = await import('../../lib/ui/components');
+  const orig = shield.render.bind(shield);
+  let last: number | null = null;
+  shield.render = (state, keep) => { last = state.items.length + state.notices.length; return orig(state, keep); };
+  try {
+    guard(f.adapter);
+    f.composer.dispatchEvent(new Event('input', { bubbles: true })); // schedules a scan
+    pressEnter(f.composer);                                          // send before it fires
+    await new Promise((r) => setTimeout(r, 700));
+    await settle(5);
+    expect(f.sends.length).toBe(1);
+    expect(last).toBe(0); // chip cleared, never redrawn
+  } finally {
+    shield.render = orig;
+  }
+});
