@@ -26,8 +26,7 @@ for (const size of SIZES) {
       await img.decode();
       g.drawImage(img, 0, 0, size, size);
       const r = size * 0.22; // mark radius
-      const ring = Math.max(1, size / 16);
-      const m = (state === 'warn' ? r * 1.2 : r) + ring; // keep halo inside the canvas
+      const m = state === 'warn' ? r * 1.2 : r; // keep mark inside the canvas
       const cx = size - m;
       const cy = m;
       const path = () => {
@@ -35,8 +34,6 @@ for (const size of SIZES) {
         if (state === 'warn') { g.moveTo(cx, cy - r * 1.2); g.lineTo(cx + r * 1.2, cy); g.lineTo(cx, cy + r * 1.2); g.lineTo(cx - r * 1.2, cy); g.closePath(); }
         else g.arc(cx, cy, r, 0, Math.PI * 2);
       };
-      // light halo so the mark reads on dark and light toolbars
-      g.lineJoin = 'round'; g.lineWidth = ring * 2; g.strokeStyle = '#ffffff'; path(); g.stroke();
       g.fillStyle = state === 'on' ? '#16a34a' : state === 'warn' ? '#f59e0b' : '#6b7280';
       path(); g.fill();
       if (state === 'off') { g.fillStyle = '#ffffff'; g.beginPath(); g.arc(cx, cy, r * 0.45, 0, Math.PI * 2); g.fill(); }
