@@ -125,20 +125,6 @@ function App() {
         </label>
       )}
 
-      {names !== null && mode !== "off" && (
-        <section className={`names ${names ? "on" : ""}`}>
-          <div>
-            <div className="status-text">{names ? t("popNamesOn") : t("popNamesOff")}</div>
-            <div className="status-sub">{names ? t("popNamesOnSub") : t("popNamesOffSub")}</div>
-          </div>
-          {!names && (
-            <button className="btn small" onClick={() => browser.tabs.create({ url: browser.runtime.getURL("/options.html#names" as never) })}>
-              {t("popNamesCta")}
-            </button>
-          )}
-        </section>
-      )}
-
       <fieldset className="modes">
         <legend>{t("popMode")}</legend>
         <div className="seg">
@@ -155,6 +141,20 @@ function App() {
       <button className="btn" onClick={togglePause} disabled={mode === "off"}>
         {paused ? t("popResume") : t("popPause")}
       </button>
+
+      {names !== null && mode !== "off" && (
+        <section className={`names ${names ? "on" : ""}`}>
+          <div>
+            <div className="status-text">{names ? t("popNamesOn") : t("popNamesOff")}</div>
+            <div className="status-sub">{names ? t("popNamesOnSub") : t("popNamesOffSub")}</div>
+          </div>
+          {!names && (
+            <button className="btn small" onClick={() => browser.tabs.create({ url: browser.runtime.getURL("/options.html#names" as never) })}>
+              {t("popNamesCta")}
+            </button>
+          )}
+        </section>
+      )}
 
       <footer>
         <span>{t("popScrubbed", count)}</span>

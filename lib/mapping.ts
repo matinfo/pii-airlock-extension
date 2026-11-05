@@ -6,9 +6,10 @@
  *   - stable token format: <ENTITY_TYPE_N>
  *   - restore() replaces all known tokens back to original values
  *
- * Never written to chrome.storage or any persistent medium.
- * One instance per content-script context (i.e. per page session).
- * Cleared on page unload or explicit panic-clear from popup.
+ * Lives in the content script's memory. The only copy kept elsewhere is
+ * `storage.session` (RAM, dropped when the browser closes), saved per tab via the
+ * background so a page reload does not renumber tokens. Never storage.local/sync.
+ * Cleared on explicit panic-clear from the popup.
  */
 
 const TOKEN_RE = /<([A-Z][A-Z0-9_]*)_(\d+)>/g;
@@ -17,6 +18,9 @@ export class BrowserMapping {
   private valueToToken = new Map<string, string>(); // "john@x.com" → "<EMAIL_ADDRESS_1>"
   private tokenToValue = new Map<string, string>(); // "<EMAIL_ADDRESS_1>" → "john@x.com"
   private counters = new Map<string, number>();       // "EMAIL_ADDRESS" → 1
+
+  /** Fired after the mapping changed (new token, import or clear). */
+  onChange?: () => void;
 
   /** Return existing token for (type, value), or mint a new one. */
   tokenFor(entityType: string, value: string): string {
@@ -29,7 +33,35 @@ export class BrowserMapping {
     const token = `<${entityType}_${idx}>`;
     this.valueToToken.set(key, token);
     this.tokenToValue.set(token, value);
+    this.onChange?.();
     return token;
+  }
+
+  /** Original value for a known token, else undefined. */
+  valueOf(token: string): string | undefined {
+    return this.tokenToValue.get(token);
+  }
+
+  /** Snapshot as [type, value, token] triples, for persistence. */
+  entries(): Array<[string, string, string]> {
+    const out: Array<[string, string, string]> = [];
+    for (const [key, token] of this.valueToToken) {
+      const i = key.indexOf('||');
+      out.push([key.slice(0, i), key.slice(i + 2), token]);
+    }
+    return out;
+  }
+
+  /** Merge a saved snapshot. Tokens minted locally win; counters move past imports. */
+  load(entries: Array<[string, string, string]>): void {
+    for (const [type, value, token] of entries) {
+      const key = `${type}||${value}`;
+      if (this.valueToToken.has(key) || this.tokenToValue.has(token)) continue;
+      this.valueToToken.set(key, token);
+      this.tokenToValue.set(token, value);
+      const n = Number(/_(\d+)>$/.exec(token)?.[1]);
+      if (n > (this.counters.get(type) ?? 0)) this.counters.set(type, n);
+    }
   }
 
   /** Replace every known token in `text` with its original value. */
@@ -64,5 +96,6 @@ export class BrowserMapping {
     this.valueToToken.clear();
     this.tokenToValue.clear();
     this.counters.clear();
+    this.onChange?.();
   }
 }

@@ -5,6 +5,8 @@ import { setLists, type Lists } from '../lib/lists';
 import { setNerTransport, warmNer } from '../lib/detection/ner-client';
 import { NER_DETECT, type NerDetectResponse } from '../lib/detection/ner-messages';
 import { MSG } from '../lib/messages';
+import { BrowserMapping } from '../lib/mapping';
+import { startRestore } from '../lib/restore';
 
 export default defineContentScript({
   matches: [
@@ -68,7 +70,32 @@ export default defineContentScript({
     // Persistent scrub counter for the popup. storage.local (not sync: no point
     // syncing a counter) and updated in the background to avoid get+set races
     // between tabs.
+    // Token store shared by the send guard (mints) and the restorer (reads).
+    // Persisted per tab through the background so reloads keep numbering.
+    const mapping = new BrowserMapping();
+    let saveTimer: ReturnType<typeof setTimeout> | undefined;
+    mapping.onChange = () => {
+      clearTimeout(saveTimer);
+      saveTimer = setTimeout(() => {
+        browser.runtime.sendMessage({ type: MSG.MAP_SAVE, entries: mapping.entries() }).catch(() => {});
+      }, 300);
+    };
+    const restoring = browser.runtime
+      .sendMessage({ type: MSG.MAP_LOAD })
+      .then((res: { entries?: Array<[string, string, string]> } | undefined) => {
+        const saved = mapping.onChange;
+        mapping.onChange = undefined; // loading is not a change worth saving
+        mapping.load(res?.entries ?? []);
+        mapping.onChange = saved;
+      })
+      .catch(() => {});
+    void restoring.then(() => {
+      if (document.body) startRestore(mapping);
+      else document.addEventListener('DOMContentLoaded', () => startRestore(mapping), { once: true });
+    });
+
     const guard = new SendGuard(adapter, {
+      mapping,
       onScrub: (count) => {
         browser.runtime.sendMessage({ type: MSG.SCRUBBED, count }).catch(() => {});
       },

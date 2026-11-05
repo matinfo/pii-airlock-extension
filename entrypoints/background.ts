@@ -134,6 +134,41 @@ export default defineBackground(() => {
     return false;
   });
 
+  // Token mapping per tab in storage.session (RAM only, gone when the browser
+  // closes), so a reload keeps `<PERSON_1>` meaning the same person. Unavailable
+  // session storage degrades to the page's own memory.
+  const mapKey = (tabId: number) => `map:${tabId}`;
+  type SessionArea = {
+    get(k: string): Promise<Record<string, unknown>>;
+    set(v: Record<string, unknown>): Promise<void>;
+    remove(k: string): Promise<void>;
+  };
+  const session = () => (browser.storage as unknown as { session?: SessionArea }).session;
+  browser.runtime.onMessage.addListener((msg, sender, sendResponse) => {
+    const m = msg as { type?: string; entries?: unknown };
+    const tabId = sender.tab?.id;
+    if ((m?.type !== MSG.MAP_LOAD && m?.type !== MSG.MAP_SAVE) || tabId === undefined) return false;
+    void (async () => {
+      const area = session();
+      try {
+        if (m.type === MSG.MAP_SAVE) {
+          if (Array.isArray(m.entries) && m.entries.length) await area?.set({ [mapKey(tabId)]: m.entries });
+          else await area?.remove(mapKey(tabId));
+          sendResponse({ ok: true });
+        } else {
+          const got = await area?.get(mapKey(tabId));
+          sendResponse({ entries: got?.[mapKey(tabId)] ?? [] });
+        }
+      } catch {
+        sendResponse({ entries: [] });
+      }
+    })();
+    return true;
+  });
+  browser.tabs.onRemoved.addListener((tabId) => {
+    void session()?.remove(mapKey(tabId)).catch(() => {});
+  });
+
   // Layer 3 NER dispatch from content scripts. Always fail-open to [].
   browser.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
     if (!isNerDetectRequest(msg)) return false;

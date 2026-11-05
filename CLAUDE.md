@@ -40,7 +40,8 @@ lib/
     nlp.ts           Layer 2: compromise.js wrapper → Detection[]
     lang.ts          franc-min: detect text language → select regex variant
     engine.ts        Combines L1+L2, deduplicates overlapping spans
-  mapping.ts         BrowserMapping: tokenFor(), restore(), clear() — in-memory only
+  mapping.ts         BrowserMapping: tokenFor(), restore(), clear(), entries()/load()
+  restore.ts         MutationObserver that swaps tokens for real values on the page
   policy.ts          Risk-tier decision matrix → allow/warn/auto_scrub/block
   intercept.ts       keydown/click/paste/drop send pipeline, fail-closed
   adapters/
@@ -138,7 +139,7 @@ memory only, cleared on page unload. Never written to chrome.storage.
 ## Key invariants (never break these)
 
 1. **Fail-closed**: if detection throws, the send is BLOCKED (Edit or explicit "Send unchecked"), never silently allowed.
-2. **No page text in storage**: BrowserMapping is memory-only. `storage.sync` holds settings only. `storage.local` holds the counter, pause and the user's own allow/deny values (typed or chosen by them; never synced). Panic clear wipes lists + mapping.
+2. **No page text in persistent storage**: BrowserMapping lives in memory (plus the RAM-only `storage.session` copy). `storage.sync` holds settings only. `storage.local` holds the counter, pause and the user's own allow/deny values (typed or chosen by them; never synced). Panic clear wipes lists + mapping.
 3. **No network calls**: extension never sends text to any remote service (only to localhost if pii-airlock enhanced mode is explicitly enabled by user).
 4. **Adapters are fragile**: provider UI changes break selectors. MutationObserver re-attaches on DOM changes. Adapter version strings must be bumped on selector updates.
 
@@ -178,5 +179,5 @@ bun run compile      # tsc --noEmit type check
 | Test runner | bun test. DOM-level tests (`tests/adapters/`) use `happy-dom` via `@happy-dom/global-registrator`. |
 | DOM emulator caveat | happy-dom AND jsdom both mis-model **at-target listener order** (they fire capture-before-bubble on the target; real browsers fire in *registration order*). This is the exact quirk behind the claude.ai keydown leak, so it CANNOT be regression-tested in an emulator — that test would pass on the broken code. Such tests belong in a real-browser harness (Playwright). happy-dom also has no `execCommand`, so `replaceContentEditable`'s native path is untestable there. |
 | Options storage | sync: mode, overrides, sitesOff. local: counter, pausedUntil, lists |
-| Restore tokens in AI response | Off by default for MVP |
+| Restore tokens in AI response | On: page text nodes show real values (display only) |
 | Detection language | navigator.language → fallback en |

@@ -41,6 +41,8 @@ export interface GuardOptions {
   onListChange?: (lists: Lists) => void;
   /** Detection function. Injectable so tests can simulate engine failure. */
   analyze?: typeof analyze;
+  /** Token store shared with the page restorer. Defaults to a private one. */
+  mapping?: BrowserMapping;
 }
 
 type Origin =
@@ -96,7 +98,7 @@ export function containsValue(haystack: string, value: string): boolean {
 }
 
 export class SendGuard {
-  private mapping = new BrowserMapping();
+  private mapping: BrowserMapping;
   private adapter: ChatAdapter;
   private _onScrub?: (n: number) => void;
   private analyze: typeof analyze;
@@ -124,6 +126,7 @@ export class SendGuard {
     this._onScrub = opts.onScrub;
     this._onListChange = opts.onListChange;
     this.analyze = opts.analyze ?? analyze;
+    this.mapping = opts.mapping ?? new BrowserMapping();
   }
 
   install(): void {

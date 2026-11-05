@@ -10,6 +10,7 @@ const EXT = resolve('.output-e2e/chrome-mv3');
 const SITE = 'https://chatgpt.com';
 
 const PAGE = `<!doctype html><html><body>
+<div id="log"></div>
 <div id="editor"></div>
 <textarea id="edit" placeholder="edit message"></textarea>
 <button id="send" data-testid="send-button" aria-label="Send prompt">Send</button>

@@ -10,4 +10,8 @@ export const MSG = {
   NER_RESET: 'pii-airlock:ner:reset',
   /** popup → content: wipe in-memory token mapping. */
   PANIC_CLEAR: 'PANIC_CLEAR',
+  /** content → background: load this tab's saved token mapping. */
+  MAP_LOAD: 'PII_MAP_LOAD',
+  /** content → background: save this tab's token mapping (storage.session). */
+  MAP_SAVE: 'PII_MAP_SAVE',
 } as const;

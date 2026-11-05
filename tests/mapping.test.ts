@@ -123,4 +123,42 @@ describe('BrowserMapping', () => {
       expect(out).toBe('<EMAIL_ADDRESS_1>');
     });
   });
+
+  // ── persistence ────────────────────────────────────────────────────────────
+
+  describe('entries / load', () => {
+    it('round-trips and continues numbering after the imported tokens', () => {
+      m.tokenFor('PERSON', 'Jean Dupont');
+      m.tokenFor('PERSON', 'Anna Rossi');
+      const saved = m.entries();
+      const fresh = new BrowserMapping();
+      fresh.load(saved);
+      expect(fresh.restore('<PERSON_2> met <PERSON_1>')).toBe('Anna Rossi met Jean Dupont');
+      expect(fresh.tokenFor('PERSON', 'Jean Dupont')).toBe('<PERSON_1>');
+      expect(fresh.tokenFor('PERSON', 'New Person')).toBe('<PERSON_3>');
+    });
+
+    it('keeps values containing the key separator intact', () => {
+      m.tokenFor('SECRET_KEY', 'a||b');
+      const fresh = new BrowserMapping();
+      fresh.load(m.entries());
+      expect(fresh.restore('<SECRET_KEY_1>')).toBe('a||b');
+    });
+
+    it('local tokens win over imported ones', () => {
+      m.tokenFor('PERSON', 'Local One');
+      m.load([['PERSON', 'Other One', '<PERSON_1>']]);
+      expect(m.restore('<PERSON_1>')).toBe('Local One');
+    });
+
+    it('notifies on mint and clear, not on repeat lookups', () => {
+      let n = 0;
+      m.onChange = () => { n++; };
+      m.tokenFor('EMAIL_ADDRESS', 'a@b.com');
+      m.tokenFor('EMAIL_ADDRESS', 'a@b.com');
+      expect(n).toBe(1);
+      m.clear();
+      expect(n).toBe(2);
+    });
+  });
 });
