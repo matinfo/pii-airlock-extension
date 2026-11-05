@@ -62,7 +62,13 @@ const EDITABLE_SEL = '[contenteditable]:not([contenteditable="false"])';
  * event would hijack the live scan and read an empty node, hiding the chip.
  */
 const PLUMBING_SEL = '.ql-clipboard';
-const SEND_LABEL_RE = /\b(send|submit|envoyer|senden|invia|enviar|ask)\b/i;
+/**
+ * Send-button labels are localised by the chat sites. Covers the interface
+ * languages of the extension (EN FR DE ES IT) plus PT and NL; the arrow icon
+ * check in isSendButton is the language-independent backstop.
+ */
+const SEND_LABEL_RE =
+  /\b(send|submit|ask|envoyer|envoi|senden|absenden|abschicken|enviar|mandar|invia|inviare|manda|verzenden|versturen)\b/i;
 const MAX_RETRIES = 3;
 
 /** Resolve the editable element an event came from, or null. */
@@ -224,7 +230,9 @@ export class SendGuard {
     if (scope === document || !scope.contains(btn)) return false;
     if (btn.matches('button[type="submit"], input[type="submit"]')) return true;
     const label = `${btn.getAttribute('aria-label') ?? ''} ${btn.getAttribute('data-testid') ?? ''} ${btn.title}`;
-    return SEND_LABEL_RE.test(label);
+    if (SEND_LABEL_RE.test(label)) return true;
+    // Language-independent: the "arrow up" / "send" icon most chat UIs use.
+    return !!btn.querySelector('[data-mat-icon-name="arrow_upward"], [data-mat-icon-name="send"], [data-icon="arrow-up"], [data-icon="send"]');
   }
 
   // ---------------------------------------------------------------------------

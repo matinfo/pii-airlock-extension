@@ -72,9 +72,15 @@ export function composerScope(composer: HTMLElement | null): ParentNode {
   if (!composer) return document;
   const form = composer.closest('form');
   if (form) return form;
+  // Climb to the smallest container that holds the composer's controls. Modern
+  // chat UIs nest the send button 4-6 levels away (Gemini), so go up to 6, but
+  // never past <body> and never into a container that also holds another editable
+  // (an edit-message box or a second composer).
   let el: HTMLElement = composer;
-  for (let i = 0; i < 3 && el.parentElement && el.parentElement !== document.body; i++) {
-    el = el.parentElement;
+  for (let i = 0; i < 6 && el.parentElement && el.parentElement !== document.body; i++) {
+    const up = el.parentElement;
+    if (up.querySelectorAll('textarea, [contenteditable]:not([contenteditable="false"])').length > 1) break;
+    el = up;
   }
   return el;
 }

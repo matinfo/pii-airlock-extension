@@ -445,3 +445,67 @@ test('"Confirm after sending" off: the message still goes out scrubbed, with no 
     applySettings({ confirmAfterSend: true });
   }
 });
+
+// Send buttons are localised by the chat sites; the send must be intercepted in each
+// interface language of the extension (+PT/NL), even when the adapter does not know
+// the button and it sits several levels away from the composer (Gemini layout).
+for (const label of [
+  'Send message', 'Envoyer le message', 'Nachricht senden', 'Enviar mensaje',
+  'Invia messaggio', 'Enviar mensagem', 'Bericht verzenden',
+]) {
+  test(`localised send button is intercepted: "${label}"`, async () => {
+    document.body.innerHTML = `<div id="shell"><div class="a"><div class="b"><div class="c"><div class="d">
+      <div id="ed" contenteditable="true">my mail jane@example.com</div></div></div>
+      <div class="e"><button aria-label="${label}" id="go"></button></div></div></div></div>`;
+    const composer = document.getElementById('ed')!;
+    const sends: number[] = [];
+    const adapter: ChatAdapter = {
+      name: 'fake', findComposer: () => composer, findSendButton: () => null,
+      getText: (c) => c.textContent ?? '', setText: (c, t) => { c.textContent = t; },
+      triggerSend: () => { sends.push(1); },
+    };
+    guard(adapter);
+    let pageSaw = false;
+    document.getElementById('go')!.addEventListener('click', () => { pageSaw = true; });
+    document.getElementById('go')!.click();
+    await settle();
+    expect(pageSaw).toBe(false);
+    expect(composer.textContent).not.toContain('jane@example.com');
+    expect(sends.length).toBe(1);
+  });
+}
+
+test('an icon-only send button (no readable label) is intercepted', async () => {
+  document.body.innerHTML = `<div><div><div><div><div>
+    <div id="ed" contenteditable="true">call +41 79 367 45 67</div></div></div></div>
+    <button id="go" aria-label="???"><mat-icon data-mat-icon-name="arrow_upward"></mat-icon></button></div></div>`;
+  const composer = document.getElementById('ed')!;
+  const sends: number[] = [];
+  const adapter: ChatAdapter = {
+    name: 'fake', findComposer: () => composer, findSendButton: () => null,
+    getText: (c) => c.textContent ?? '', setText: (c, t) => { c.textContent = t; },
+    triggerSend: () => { sends.push(1); },
+  };
+  guard(adapter);
+  document.getElementById('go')!.click();
+  await settle();
+  expect(composer.textContent).not.toContain('367 45 67');
+  expect(sends.length).toBe(1);
+});
+
+test('an unrelated button elsewhere is not hijacked (wider scope stays safe)', async () => {
+  document.body.innerHTML = `<div><div id="ed" contenteditable="true">hello</div></div>
+    <aside><div><div id="side" contenteditable="true">notes</div><button aria-label="Enviar comentarios" id="other"></button></div></aside>`;
+  const composer = document.getElementById('ed')!;
+  const adapter: ChatAdapter = {
+    name: 'fake', findComposer: () => composer, findSendButton: () => null,
+    getText: (c) => c.textContent ?? '', setText: (c, t) => { c.textContent = t; },
+    triggerSend: () => {},
+  };
+  guard(adapter);
+  let clicked = false;
+  document.getElementById('other')!.addEventListener('click', () => { clicked = true; });
+  document.getElementById('other')!.click();
+  await settle(3);
+  expect(clicked).toBe(true);
+});
