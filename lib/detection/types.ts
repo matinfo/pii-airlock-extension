@@ -23,6 +23,8 @@ export interface DetectionResult {
   decision: Decision;          // computed by policy engine
   /** True when detection itself failed. `detections` is then NOT trustworthy: never scrub-and-send. */
   error?: boolean;
+  /** The optional names model did not answer in time; only regex + compromise decided. */
+  nerTimedOut?: boolean;
 }
 
 /** A stable token replacing a PII span, e.g. "<EMAIL_ADDRESS_1>". */

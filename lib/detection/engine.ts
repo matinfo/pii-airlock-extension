@@ -59,12 +59,14 @@ export async function analyze(
     // Layer 2: compromise (instant, lexicon-based fallback).
     // Layer 3: transformer NER (heavy, multilingual, catches novel surnames +
     // non-English given names). Higher NER scores win the overlap dedupe.
-    const [nlpHits, nerHits] = await Promise.all([
+    const [nlpHits, ner] = await Promise.all([
       options.skipNlp ? Promise.resolve([]) : detectNlp(text, lang),
-      options.skipNer ? Promise.resolve([]) : detectNerRemote(text, lang),
+      options.skipNer
+        ? Promise.resolve({ detections: [] as Detection[], timedOut: false })
+        : detectNerRemote(text, lang),
     ]);
 
-    const all = dedupeOverlaps([...regexHits, ...nlpHits, ...nerHits]);
+    const all = dedupeOverlaps([...regexHits, ...nlpHits, ...ner.detections]);
     const topTier = all.length > 0
       ? (all.map((d) => tierOf(d.entityType)).sort((a, b) =>
           tierRank(a) - tierRank(b),
@@ -73,7 +75,7 @@ export async function analyze(
 
     const decision = getDecision(all);
 
-    return { detections: all, topTier, decision };
+    return { detections: all, topTier, decision, ...(ner.timedOut ? { nerTimedOut: true } : {}) };
   } catch (err) {
     console.error('[pii-airlock] detection engine error:', err);
     // Fail-closed: treat as block so PII is never silently passed through

@@ -1,7 +1,7 @@
 import { resolveAdapter } from '../lib/adapters';
 import { SendGuard } from '../lib/intercept';
 import { applySettings } from '../lib/policy';
-import { setNerTransport } from '../lib/detection/ner-client';
+import { setNerTransport, warmNer } from '../lib/detection/ner-client';
 import { NER_DETECT, type NerDetectResponse } from '../lib/detection/ner-messages';
 import { MSG } from '../lib/messages';
 
@@ -34,6 +34,17 @@ export default defineContentScript({
         return [];
       }
     });
+
+    // Warm the names model when the user starts composing (not on page load),
+    // so the first send does not hit a cold model. No-op if not installed.
+    let lastWarm = 0;
+    document.addEventListener('focusin', (e) => {
+      const t = e.target as HTMLElement | null;
+      if (!t || !(t.isContentEditable || t.tagName === 'TEXTAREA')) return;
+      if (Date.now() - lastWarm < 60_000) return;
+      lastWarm = Date.now();
+      warmNer();
+    }, true);
 
     // Load settings from storage then activate
     browser.storage.sync

@@ -29,10 +29,41 @@ export function setNerTransport(fn: NerTransport): void {
   transport = fn;
 }
 
-export async function detectNerRemote(text: string, lang: string): Promise<Detection[]> {
+/** How long a send may wait for the names model before regex+compromise decide alone. */
+export const NER_BUDGET_MS = 400;
+
+export interface NerOutcome {
+  detections: Detection[];
+  /** The model did not answer within the budget (loading or slow). */
+  timedOut: boolean;
+}
+
+/**
+ * Ask the names model, but never block a send on it: after `budgetMs` the
+ * caller proceeds with L1+L2 only. The request keeps running, so a model that
+ * was still loading is warm for the next message. Never throws.
+ */
+export async function detectNerRemote(
+  text: string,
+  lang: string,
+  budgetMs: number = NER_BUDGET_MS,
+): Promise<NerOutcome> {
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  const timeout = new Promise<NerOutcome>((resolve) => {
+    timer = setTimeout(() => resolve({ detections: [], timedOut: true }), budgetMs);
+  });
+  const run = transport(text, lang).then(
+    (detections): NerOutcome => ({ detections, timedOut: false }),
+    (): NerOutcome => ({ detections: [], timedOut: false }),
+  );
   try {
-    return await transport(text, lang);
-  } catch {
-    return [];
+    return await Promise.race([run, timeout]);
+  } finally {
+    clearTimeout(timer);
   }
+}
+
+/** Fire-and-forget: ask the host to load the model now (composer focus). */
+export function warmNer(): void {
+  void transport('Warm up.', 'en').catch(() => {});
 }

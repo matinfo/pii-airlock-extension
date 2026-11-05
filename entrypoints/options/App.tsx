@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import icon from "~/assets/pii-airlock-icon.png";
+import NerSection from "./NerSection";
 import "./App.css";
 
 type Mode = "strict" | "permissive";
@@ -213,6 +214,8 @@ function App() {
         </div>
       </section>
 
+      <NerSection />
+
       {/* Entity overrides */}
       <section className="section">
         <h2>Per-entity policy</h2>
@@ -306,7 +309,7 @@ function App() {
       </div>
 
       <footer>
-        <span>PII Airlock — open source, no data leaves your browser.</span>
+        <span>PII Airlock — open source. Your text never leaves your browser.</span>
         <a
           href="https://github.com/matinfo/pii-airlock-extension"
           target="_blank"
