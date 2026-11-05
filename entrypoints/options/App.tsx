@@ -1,4 +1,4 @@
-import { useEffect, useState, type FormEvent } from "react";
+import { useEffect, useRef, useState, type FormEvent } from "react";
 import { t, entityLabel } from "~/lib/i18n";
 import { defaultDecisionFor, type Mode } from "~/lib/policy";
 import type { Decision } from "~/lib/detection/types";
@@ -32,6 +32,7 @@ function App() {
   const [lists, setLists] = useState<Lists>({ allow: [], deny: [] });
   const [confirm, setConfirm] = useState(true);
   const [saved, setSaved] = useState(false);
+  const resetDialog = useRef<HTMLDialogElement>(null);
 
   useEffect(() => {
     browser.storage.sync.get({ mode: "auto", overrides: {}, confirmAfterSend: true }).then((s) => {
@@ -162,11 +163,21 @@ function App() {
 
       <footer>
         <span>{t("optFooter")}</span>
-        <button className="link" onClick={() => {
-          setMode("auto"); setOverrides({});
-          void saveSync({ mode: "auto", overrides: {} });
-        }}>{t("optReset")}</button>
+        <button className="link" onClick={() => resetDialog.current?.showModal()}>{t("optReset")}</button>
       </footer>
+
+      <dialog ref={resetDialog} className="confirm" aria-labelledby="reset-title">
+        <h2 id="reset-title">{t("optResetTitle")}</h2>
+        <p>{t("optResetBody")}</p>
+        <div className="actions">
+          <button className="btn" autoFocus onClick={() => resetDialog.current?.close()}>{t("btnCancel")}</button>
+          <button className="btn primary" onClick={() => {
+            setMode("auto"); setOverrides({}); setConfirm(true);
+            void saveSync({ mode: "auto", overrides: {}, confirmAfterSend: true });
+            resetDialog.current?.close();
+          }}>{t("optReset")}</button>
+        </div>
+      </dialog>
     </div>
   );
 }

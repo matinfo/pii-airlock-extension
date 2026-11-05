@@ -77,3 +77,9 @@ footer { display: flex; align-items: center; justify-content: space-between; col
 .check { display: flex; align-items: flex-start; gap: 10px; margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--border); cursor: pointer; }
 .check input { margin-top: 3px; accent-color: var(--accent); }
 .check small { display: block; color: var(--muted); font-size: 12px; }
+
+dialog.confirm { margin: auto; width: min(420px, calc(100vw - 32px)); padding: 20px; border: 1px solid var(--border); border-radius: 12px; background: var(--bg); color: var(--fg); box-shadow: 0 8px 24px rgb(0 0 0 / .16); }
+dialog.confirm::backdrop { background: rgb(0 0 0 / .4); }
+dialog.confirm h2 { font-size: 15px; font-weight: 600; margin-bottom: 6px; }
+dialog.confirm p { color: var(--muted); margin-bottom: 16px; }
+dialog.confirm .actions { display: flex; justify-content: flex-end; gap: 8px; }

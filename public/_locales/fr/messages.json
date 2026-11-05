@@ -269,6 +269,12 @@
   "optConfirmHint": {
     "message": "Afficher une courte note quand un message a été envoyé avec des remplacements."
   },
+  "optResetTitle": {
+    "message": "Réinitialiser les réglages ?"
+  },
+  "optResetBody": {
+    "message": "Le mode, les choix par type et « Confirmer après l’envoi » reviennent aux valeurs par défaut. Vos listes et le modèle de noms sont conservés."
+  },
   "optEmpty": {
     "message": "Rien pour l’instant."
   },

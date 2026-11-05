@@ -96,6 +96,8 @@ T = {
  'optInvalid': ('Needs at least 2 characters, including a letter or a digit.', 'Au moins 2 caractères, dont une lettre ou un chiffre.', 'Mindestens 2 Zeichen, mit einem Buchstaben oder einer Ziffer.'),
  'optConfirm': ('Confirm after sending', 'Confirmer après l’envoi', 'Nach dem Senden bestätigen'),
  'optConfirmHint': ('Show a short note when a message was sent with replacements.', 'Afficher une courte note quand un message a été envoyé avec des remplacements.', 'Kurzen Hinweis zeigen, wenn eine Nachricht mit Ersetzungen gesendet wurde.'),
+ 'optResetTitle': ('Reset settings?', 'Réinitialiser les réglages ?', 'Einstellungen zurücksetzen?'),
+ 'optResetBody': ('Protection mode, per-kind choices and “Confirm after sending” go back to their defaults. Your lists and the names model are kept.', 'Le mode, les choix par type et « Confirmer après l’envoi » reviennent aux valeurs par défaut. Vos listes et le modèle de noms sont conservés.', 'Schutzmodus, Auswahl pro Datentyp und „Nach dem Senden bestätigen“ werden auf die Standardwerte gesetzt. Ihre Listen und das Namensmodell bleiben erhalten.'),
  'optEmpty': ('Nothing here yet.', 'Rien pour l’instant.', 'Noch nichts vorhanden.'),
  'optRemove': ('Remove', 'Retirer', 'Entfernen'),
  'optReset': ('Reset settings', 'Réinitialiser les réglages', 'Einstellungen zurücksetzen'),

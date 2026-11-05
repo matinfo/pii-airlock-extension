@@ -269,6 +269,12 @@
   "optConfirmHint": {
     "message": "Kurzen Hinweis zeigen, wenn eine Nachricht mit Ersetzungen gesendet wurde."
   },
+  "optResetTitle": {
+    "message": "Einstellungen zurücksetzen?"
+  },
+  "optResetBody": {
+    "message": "Schutzmodus, Auswahl pro Datentyp und „Nach dem Senden bestätigen“ werden auf die Standardwerte gesetzt. Ihre Listen und das Namensmodell bleiben erhalten."
+  },
   "optEmpty": {
     "message": "Noch nichts vorhanden."
   },
