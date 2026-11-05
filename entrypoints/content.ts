@@ -17,6 +17,7 @@ export default defineContentScript({
     'https://copilot.microsoft.com/*',
     'https://copilot.cloud.microsoft/*',
     'https://*.perplexity.ai/*',
+    'https://*.mistral.ai/*',
   ],
   main() {
     // Route Layer 3 NER to the background (→ offscreen on Chrome, direct on

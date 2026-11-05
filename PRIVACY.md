@@ -23,7 +23,7 @@ If you turn on **Better name detection**, the extension downloads a language mod
 
 ## Permissions
 
-- **Access to the supported chat sites** (ChatGPT, Claude, Gemini, Copilot, Perplexity): needed to read the message box and replace data before sending. No other sites.
+- **Access to the supported chat sites** (ChatGPT, Claude, Gemini, Copilot, Perplexity, Mistral): needed to read the message box and replace data before sending. No other sites.
 - **storage**: to keep your settings and lists.
 - **offscreen** (Chrome and Edge): to run the optional names model off the page.
 

@@ -2,7 +2,7 @@
 
 A browser extension that replaces personal data in your AI chat messages with placeholders before they are sent.
 
-Works on **Claude, ChatGPT, Gemini, Copilot and Perplexity.**
+Works on **Claude, ChatGPT, Gemini, Copilot, Perplexity and Mistral.**
 No account and no server: install it and it protects those sites. Better name detection is optional (see below).
 
 ---
@@ -73,8 +73,9 @@ Verified on the live site:
 - gemini.google.com
 - copilot.microsoft.com, copilot.cloud.microsoft
 - perplexity.ai
+- chat.mistral.ai (Le Chat)
 
-Other sites are not supported: the extension does not run on them, and requests no permission for them. Adapters for Poe, Character.ai, Mistral, Hugging Face Chat and You.com exist in the code but are not shipped until they have been verified in a real browser.
+Other sites are not supported: the extension does not run on them, and requests no permission for them. Adapters for Poe, Character.ai, Hugging Face Chat and You.com exist in the code but are not shipped until they have been verified in a real browser.
 
 ---
 
