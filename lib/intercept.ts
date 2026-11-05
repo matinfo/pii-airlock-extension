@@ -29,19 +29,16 @@ import { composerScope, isTextControl, setTextControl } from './adapters/dom';
 import { analyze } from './detection/engine';
 import type { Detection, DetectionResult } from './detection/types';
 import { BrowserMapping } from './mapping';
-import { isQuiet, mustScrub } from './policy';
-import {
-  UI_HOST_ID,
-  dismissBanner,
-  isBannerOpen,
-  showBanner,
-  showModal,
-  showPill,
-} from './ui/components';
+import { isActive, currentSettings, mustScrub } from './policy';
+import { getLists, setLists, type Lists } from './lists';
+import { t } from './i18n';
+import { UI_HOST_ID, shield, showModal, type PanelItem } from './ui/components';
 
 export interface GuardOptions {
   /** Called with the number of items scrubbed after each successful scrub. */
   onScrub?: (count: number) => void;
+  /** Called when the user edits their allow / deny lists from the panel. */
+  onListChange?: (lists: Lists) => void;
   /** Detection function. Injectable so tests can simulate engine failure. */
   analyze?: typeof analyze;
 }
@@ -108,18 +105,24 @@ export class SendGuard {
   private _sending = false;
   /** One evaluation at a time. */
   private _busy = false;
-  /** An intent that arrived while a banner was open; replayed once it closes. */
-  private _pending: Ctx | null = null;
+  private _onListChange?: (l: Lists) => void;
+  /** Items the user unticked for the current message (type|value keys). */
+  private excluded = new Set<string>();
+  private scanSeq = 0;
+  private scanTimer: ReturnType<typeof setTimeout> | undefined;
+  private liveEditable: HTMLElement | null = null;
 
   private _onKeydown = (e: KeyboardEvent) => this.handleKeydown(e);
   private _onClick = (e: MouseEvent) => this.handleClick(e);
   private _onSubmit = (e: Event) => this.handleSubmit(e);
-  private _onPaste = (e: ClipboardEvent) => this.handlePaste(e, e.clipboardData);
-  private _onDrop = (e: DragEvent) => this.handlePaste(e, e.dataTransfer);
+  private _onInput = (e: Event) => this.scheduleScan(editableFrom(e));
+  private _onPaste = (e: ClipboardEvent) => this.scheduleScan(editableFrom(e));
+  private _onDrop = (e: DragEvent) => this.scheduleScan(editableFrom(e));
 
   constructor(adapter: ChatAdapter, opts: GuardOptions = {}) {
     this.adapter = adapter;
     this._onScrub = opts.onScrub;
+    this._onListChange = opts.onListChange;
     this.analyze = opts.analyze ?? analyze;
   }
 
@@ -131,12 +134,21 @@ export class SendGuard {
     document.addEventListener('submit', this._onSubmit, true);
     document.addEventListener('paste', this._onPaste, true);
     document.addEventListener('drop', this._onDrop, true);
+    document.addEventListener('input', this._onInput, true);
+    shield.init(() => this.anchor(), {
+      onToggle: (key, checked) => { if (checked) this.excluded.delete(key); else this.excluded.add(key); },
+      onAllow: (item) => this.allowValue(item),
+      onAlways: (item) => this.alwaysScrub(item),
+      onScrubNow: () => { if (this.liveEditable) void this.scrubInPlace(this.liveEditable); },
+    });
   }
 
   destroy(): void {
     if (!this._installed) return;
     this._installed = false;
-    dismissBanner();
+    clearTimeout(this.scanTimer);
+    shield.destroy();
+    document.removeEventListener('input', this._onInput, true);
     document.removeEventListener('keydown', this._onKeydown, true);
     document.removeEventListener('click', this._onClick, true);
     document.removeEventListener('submit', this._onSubmit, true);
@@ -155,7 +167,7 @@ export class SendGuard {
   // ---------------------------------------------------------------------------
 
   private handleKeydown(e: KeyboardEvent): void {
-    if (this._sending) return;
+    if (this._sending || !isActive()) return;
     if (e.key !== 'Enter') return;
     // Shift/Alt+Enter = newline. IME confirmation (CJK) is not a send; keyCode
     // 229 covers browsers that fire keydown after compositionend.
@@ -169,7 +181,7 @@ export class SendGuard {
   }
 
   private handleClick(e: MouseEvent): void {
-    if (this._sending) return;
+    if (this._sending || !isActive()) return;
     const btn = buttonFrom(e);
     if (!btn) return;
     const composer = this.adapter.findComposer();
@@ -181,7 +193,7 @@ export class SendGuard {
   }
 
   private handleSubmit(e: Event): void {
-    if (this._sending) return;
+    if (this._sending || !isActive()) return;
     const form = e.target;
     if (!(form instanceof HTMLFormElement)) return;
     const editable =
@@ -205,23 +217,77 @@ export class SendGuard {
     return SEND_LABEL_RE.test(label);
   }
 
-  private handlePaste(e: ClipboardEvent | DragEvent, data: DataTransfer | null): void {
-    const editable = editableFrom(e);
-    if (!editable) return;
-    const pasted = data?.getData('text/plain') ?? '';
-    if (!pasted.trim()) return;
+  // ---------------------------------------------------------------------------
+  // Live scan: keeps the chip current while the user types, pastes or drops.
+  // Regex + compromise only (fast); the names model joins at send time.
+  // ---------------------------------------------------------------------------
 
-    // Never block paste. Scan the pasted text; if it is sensitive, offer to
-    // scrub IN PLACE — by re-analysing the whole composer, because offsets from
-    // the pasted snippet mean nothing in the full text.
-    void this.analyze(pasted)
-      .then(async (r) => {
-        if (r.error || r.decision === 'allow' || r.decision === 'notify') return;
-        if (!r.detections.some(mustScrub)) return;
-        const action = await showBanner(r.detections, r.topTier === 'high', 'paste');
-        if (action === 'scrub') await this.scrubInPlace(editable);
-      })
-      .catch(() => { /* paste scan failures are non-fatal: send path re-checks everything */ });
+  private anchor() {
+    const composer = this.liveEditable?.isConnected ? this.liveEditable : this.adapter.findComposer();
+    if (!composer) return null;
+    return { composer, sendButton: this.adapter.findSendButton(composer) };
+  }
+
+  private scheduleScan(editable: HTMLElement | null): void {
+    if (!editable) return;
+    this.liveEditable = editable;
+    clearTimeout(this.scanTimer);
+    this.scanTimer = setTimeout(() => void this.scan(editable), 350);
+  }
+
+  private keyOf = (d: Pick<Detection, 'entityType' | 'value'>) => `${d.entityType}|${d.value.toLowerCase()}`;
+
+  private toItem(d: Detection, token?: string): PanelItem {
+    return {
+      key: this.keyOf(d),
+      entityType: d.entityType,
+      value: d.value,
+      token,
+      checked: !this.excluded.has(this.keyOf(d)),
+    };
+  }
+
+  private async scan(editable: HTMLElement): Promise<void> {
+    const seq = ++this.scanSeq;
+    if (!isActive()) {
+      shield.render({ items: [], notices: [], mode: 'auto', paused: currentSettings().mode !== 'off' && !currentSettings().siteOff });
+      return;
+    }
+    const text = this.read(editable);
+    if (!text.trim()) { this.excluded.clear(); shield.render({ items: [], notices: [], mode: 'auto', paused: false }); return; }
+    const r = await this.analyze(text, { skipNer: true });
+    if (seq !== this.scanSeq || r.error) return;
+    shield.render(this.chipState(r.detections));
+  }
+
+  private chipState(detections: Detection[]) {
+    const seen = new Set<string>();
+    const uniq = (list: Detection[]) => list.filter((d) => !seen.has(this.keyOf(d)) && seen.add(this.keyOf(d)));
+    const mode = currentSettings().mode === 'review' ? 'review' as const : 'auto' as const;
+    return {
+      items: uniq(detections.filter(mustScrub)).map((d) => this.toItem(d)),
+      notices: uniq(detections.filter((d) => !mustScrub(d) && d.entityType !== 'LOCATION' && d.entityType !== 'ORG')).map((d) => this.toItem(d)),
+      mode,
+      paused: false,
+    };
+  }
+
+  private persistLists(l: Lists): void {
+    setLists(l);
+    this._onListChange?.(getLists());
+  }
+
+  private allowValue(item: PanelItem): void {
+    const cur = getLists();
+    this.persistLists({ allow: [...cur.allow, item.value], deny: cur.deny.filter((e) => e.value.toLowerCase() !== item.value.toLowerCase()) });
+    this.excluded.delete(item.key);
+    if (this.liveEditable) void this.scan(this.liveEditable);
+  }
+
+  private alwaysScrub(item: PanelItem): void {
+    const cur = getLists();
+    this.persistLists({ allow: cur.allow.filter((v) => v !== item.value.toLowerCase()), deny: [...cur.deny, { value: item.value, type: item.entityType }] });
+    if (this.liveEditable) void this.scan(this.liveEditable);
   }
 
   // ---------------------------------------------------------------------------
@@ -229,25 +295,16 @@ export class SendGuard {
   // ---------------------------------------------------------------------------
 
   private start(ctx: Ctx): void {
-    // Re-entrant intents (double Enter, click during analysis, Enter while a
-    // dialog is open) are swallowed. The listener already prevented the default.
-    if (this._busy) {
-      // A non-modal banner is waiting on the user. Pressing Enter again means
-      // "I fixed it, try again": close the banner and re-run on the new text.
-      if (isBannerOpen()) { this._pending = ctx; dismissBanner(); }
-      return;
-    }
+    // Re-entrant intents (double Enter, click during analysis, Enter while the
+    // review panel is open) are swallowed. The listener already prevented the
+    // default.
+    if (this._busy) return;
     this._busy = true;
     void this.evaluate(ctx)
       .catch((err) => {
         console.error('[pii-airlock] send pipeline error — message NOT sent:', err);
       })
-      .finally(() => {
-        this._busy = false;
-        const next = this._pending;
-        this._pending = null;
-        if (next) this.start(next);
-      });
+      .finally(() => { this._busy = false; });
   }
 
   private async evaluate(ctx: Ctx): Promise<void> {
@@ -280,34 +337,29 @@ export class SendGuard {
       return 'done';
     }
 
+    this.nerNote = result.nerTimedOut ? t('namesSkipped') : null;
+    shield.skipNote = this.nerNote;
+
     switch (decision) {
       case 'allow':
-        await this.send(ctx);
-        return 'done';
-
-      case 'notify':
-        // honest wording (sent unchanged); stay silent for ubiquitous types
-        if (detections.some((d) => !isQuiet(d.entityType))) showPill(detections.length, 'noticed');
+      case 'notify': // noticed-only items stay visible in the chip; nothing to do at send
         await this.send(ctx);
         return 'done';
 
       case 'warn': {
-        const action = await showBanner(detections, false, 'send');
-        if (action === 'scrub') return this.scrubAndSend(ctx, text, detections);
-        if (action === 'send') await this.send(ctx);
-        return 'done'; // 'edit' → user corrects the message
-      }
-
-      case 'auto_scrub':
+        // Review mode: show exactly what will change, let the user adjust.
+        const state = this.chipState(detections);
+        const action = await shield.reviewBeforeSend(state);
+        if (action === 'cancel') return 'done';
         return this.scrubAndSend(ctx, text, detections);
-
-      case 'block': {
-        const action = await showModal('detected', detections);
-        if (action === 'scrub') return this.scrubAndSend(ctx, text, detections);
-        return 'done';
       }
+
+      default: // 'auto_scrub' | 'block' (legacy override): scrub silently, then tell
+        return this.scrubAndSend(ctx, text, detections);
     }
   }
+
+  private nerNote: string | null = null;
 
   /** error / scrub-failed dialog. Only `error` may end in an explicit raw send. */
   private async failure(
@@ -315,7 +367,7 @@ export class SendGuard {
     kind: 'error' | 'scrub-failed',
     detections: Detection[],
   ): Promise<void> {
-    const action = await showModal(kind, detections);
+    const action = await showModal(kind, detections.map((d) => d.entityType));
     if (action === 'send-unscanned') await this.send(ctx);
   }
 
@@ -329,8 +381,8 @@ export class SendGuard {
     analysed: string,
     detections: Detection[],
   ): Promise<'done' | 'retry'> {
-    const toScrub = detections.filter(mustScrub);
-    if (toScrub.length === 0) { await this.send(ctx); return 'done'; }
+    const toScrub = detections.filter(mustScrub).filter((d) => !this.excluded.has(this.keyOf(d)));
+    if (toScrub.length === 0) { this.afterSend(); await this.send(ctx); return 'done'; }
 
     // Offsets are only valid for the analysed text. A dialog may have been open
     // while the user kept typing: re-analyse instead of clobbering their edits.
@@ -342,8 +394,8 @@ export class SendGuard {
       await this.failure(ctx, 'scrub-failed', toScrub);
       return 'done';
     }
-    showPill(toScrub.length, 'scrubbed');
     this._onScrub?.(toScrub.length);
+    this.afterSend(toScrub);
     await this.send(ctx);
     return 'done';
   }
@@ -372,15 +424,29 @@ export class SendGuard {
       const r = await this.analyze(text);
       if (r.error) return;
       if (this.read(editable) !== text) continue;
-      const toScrub = r.detections.filter(mustScrub);
+      const toScrub = r.detections.filter(mustScrub).filter((d) => !this.excluded.has(this.keyOf(d)));
       if (toScrub.length === 0) return;
       if (await this.commitScrub(editable, text, toScrub)) {
-        showPill(toScrub.length, 'scrubbed');
         this._onScrub?.(toScrub.length);
+        this.afterSend(toScrub, false);
+        void this.scan(editable);
       } else {
-        await showModal('scrub-failed', toScrub);
+        await showModal('scrub-failed', toScrub.map((d) => d.entityType));
       }
       return;
+    }
+  }
+
+  /** Toast the replacements (distinct values) and reset the per-message state. */
+  private afterSend(scrubbed: Detection[] = [], clear = true): void {
+    const seen = new Set<string>();
+    const items = scrubbed
+      .filter((d) => !seen.has(this.keyOf(d)) && seen.add(this.keyOf(d)))
+      .map((d) => this.toItem(d, this.mapping.tokenFor(d.entityType, d.value)));
+    shield.toast(items, this.nerNote);
+    if (clear) {
+      this.excluded.clear();
+      shield.render({ items: [], notices: [], mode: 'auto', paused: false });
     }
   }
 

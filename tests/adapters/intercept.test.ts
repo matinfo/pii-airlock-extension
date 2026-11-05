@@ -47,7 +47,7 @@ afterEach(() => { while (guards.length) guards.pop()!.destroy(); });
 
 beforeEach(() => {
   document.body.innerHTML = '';
-  applySettings({ mode: 'strict', overrides: {} });
+  applySettings({ mode: 'auto', overrides: {}, siteOff: false, pausedUntil: 0 });
 });
 
 // --- helpers ---------------------------------------------------------------
@@ -274,7 +274,7 @@ test('A8: double Enter sends exactly once', async () => {
 });
 
 test('A8: text typed during analysis is re-analysed, not overwritten', async () => {
-  applySettings({ mode: 'strict', overrides: { PERSON: 'auto_scrub', EMAIL_ADDRESS: 'auto_scrub' } });
+  applySettings({ mode: 'auto', overrides: { PERSON: 'auto_scrub', EMAIL_ADDRESS: 'auto_scrub' } });
   const f = makeFake('Bonjour Mathieu');
   let first = true;
   const { analyze: real } = await import('../../lib/detection/engine');
@@ -303,12 +303,66 @@ test('A3: an edit-message box (not the main composer) is guarded too', async () 
   edit.addEventListener('keydown', (e) => { if (!e.defaultPrevented) replayed = true; });
   edit.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true }));
   await settle();
-  expect(replayed).toBe(false);  // high-risk email in strict mode → blocked behind a dialog
+  // auto mode scrubs the edit box in place, then replays the user's Enter
+  expect(edit.value).not.toContain('jane@example.com');
+  expect(edit.value).toMatch(/<EMAIL_ADDRESS_\d+>/);
+  expect(replayed).toBe(true);
+});
+
+test('review mode: nothing is sent or changed until the user decides; Esc cancels', async () => {
+  applySettings({ mode: 'review' });
+  const f = makeFake('mail jane@example.com');
+  guard(f.adapter);
+  pressEnter(f.composer);
+  await settle();
   expect(f.sends.length).toBe(0);
+  expect(f.composer.textContent).toContain('jane@example.com');
+  document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+  await settle();
+  expect(f.sends.length).toBe(0);
+  expect(f.composer.textContent).toContain('jane@example.com');
+});
+
+test('mode off: the guard steps aside completely', async () => {
+  applySettings({ mode: 'off' });
+  const f = makeFake('mail jane@example.com');
+  guard(f.adapter);
+  const ev = new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true });
+  f.composer.dispatchEvent(ev);
+  expect(ev.defaultPrevented).toBe(false);
+});
+
+test('site switched off and active pause both step aside; pause expiry resumes', async () => {
+  const f = makeFake('mail jane@example.com');
+  guard(f.adapter);
+  applySettings({ siteOff: true });
+  let ev = new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true });
+  f.composer.dispatchEvent(ev);
+  expect(ev.defaultPrevented).toBe(false);
+  applySettings({ siteOff: false, pausedUntil: Date.now() + 60_000 });
+  ev = new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true });
+  f.composer.dispatchEvent(ev);
+  expect(ev.defaultPrevented).toBe(false);
+  applySettings({ pausedUntil: Date.now() - 1 });
+  ev = new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true });
+  f.composer.dispatchEvent(ev);
+  expect(ev.defaultPrevented).toBe(true);
+});
+
+test('allow-list: an allowed value is sent as typed', async () => {
+  const { setLists, EMPTY_LISTS } = await import('../../lib/lists');
+  setLists({ allow: ['jane@example.com'] });
+  const f = makeFake('mail jane@example.com');
+  guard(f.adapter);
+  pressEnter(f.composer);
+  await settle();
+  setLists(EMPTY_LISTS);
+  expect(f.sends.length).toBe(1);
+  expect(f.composer.textContent).toContain('jane@example.com');
 });
 
 test('A11: an allow-listed entity is not scrubbed along with others', async () => {
-  applySettings({ mode: 'strict', overrides: { PERSON: 'allow', EMAIL_ADDRESS: 'auto_scrub' } });
+  applySettings({ mode: 'auto', overrides: { PERSON: 'allow', EMAIL_ADDRESS: 'auto_scrub' } });
   const f = makeFake('Mathieu wrote from jane@example.com');
   guard(f.adapter);
   pressEnter(f.composer);

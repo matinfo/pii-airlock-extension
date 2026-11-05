@@ -48,8 +48,9 @@ export default defineConfig({
     },
   },
   manifest: {
-    name: 'PII Airlock',
-    description: 'Automatically detects and scrubs PII from AI chat inputs before you send',
+    name: '__MSG_extName__',
+    description: '__MSG_extDesc__',
+    default_locale: 'en',
     // 'wasm-unsafe-eval' lets the packaged ORT runtime compile its .wasm. No
     // 'unsafe-eval', no remote script sources.
     content_security_policy: {

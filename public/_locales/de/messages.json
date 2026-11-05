@@ -1,0 +1,344 @@
+{
+  "extName": {
+    "message": "PII Airlock"
+  },
+  "extDesc": {
+    "message": "Ersetzt personenbezogene Daten in Ihren KI-Chatnachrichten vor dem Senden."
+  },
+  "appName": {
+    "message": "PII Airlock"
+  },
+  "chipReplace": {
+    "message": "$p1$ wird ersetzt",
+    "placeholders": {
+      "p1": {
+        "content": "$1"
+      }
+    }
+  },
+  "chipReview": {
+    "message": "$p1$ zu prüfen",
+    "placeholders": {
+      "p1": {
+        "content": "$1"
+      }
+    }
+  },
+  "chipNoticed": {
+    "message": "Erkannt"
+  },
+  "chipPaused": {
+    "message": "Pausiert"
+  },
+  "panelLive": {
+    "message": "Wird beim Senden ersetzt"
+  },
+  "panelReview": {
+    "message": "Vor dem Senden prüfen"
+  },
+  "panelAfter": {
+    "message": "In Ihrer letzten Nachricht ersetzt"
+  },
+  "subLive": {
+    "message": "Abwählen, was unverändert gesendet werden soll."
+  },
+  "subReview": {
+    "message": "Markierte Einträge werden durch Platzhalter ersetzt."
+  },
+  "subAfter": {
+    "message": "Der Assistent hat nur die Platzhalter gesehen."
+  },
+  "groupNoticed": {
+    "message": "Erkannt, nicht geändert"
+  },
+  "btnCancel": {
+    "message": "Abbrechen"
+  },
+  "btnReplaceSend": {
+    "message": "Ersetzen und senden"
+  },
+  "btnReplaceNow": {
+    "message": "Jetzt ersetzen"
+  },
+  "rowAllow": {
+    "message": "Immer erlauben"
+  },
+  "rowAlways": {
+    "message": "Immer ersetzen"
+  },
+  "rowDontReplace": {
+    "message": "Nicht mehr ersetzen"
+  },
+  "toastOne": {
+    "message": "1 Eintrag ersetzt"
+  },
+  "toastMany": {
+    "message": "$p1$ Einträge ersetzt",
+    "placeholders": {
+      "p1": {
+        "content": "$1"
+      }
+    }
+  },
+  "toastDetails": {
+    "message": "Details"
+  },
+  "namesSkipped": {
+    "message": "Namensmodell lädt noch; nur die eingebaute Namensliste wurde genutzt."
+  },
+  "errTitle": {
+    "message": "Nachricht konnte nicht geprüft werden"
+  },
+  "errBody": {
+    "message": "Die Prüfung ist fehlgeschlagen, der Inhalt ist unbekannt. Die Nachricht wurde nicht gesendet."
+  },
+  "failTitle": {
+    "message": "Sensible Daten konnten nicht ersetzt werden"
+  },
+  "failBody": {
+    "message": "Der Editor hat die Änderung nicht übernommen, die Nachricht wurde nicht gesendet. Bitte manuell entfernen:"
+  },
+  "btnEdit": {
+    "message": "Nachricht bearbeiten"
+  },
+  "btnSendUnscanned": {
+    "message": "Ungeprüft senden"
+  },
+  "popActive": {
+    "message": "Diese Seite ist geschützt"
+  },
+  "popNoComposer": {
+    "message": "Kein Eingabefeld gefunden. Hier nicht geschützt."
+  },
+  "popUnsupported": {
+    "message": "Auf dieser Seite nicht aktiv"
+  },
+  "popOff": {
+    "message": "Schutz ist ausgeschaltet"
+  },
+  "popSiteOff": {
+    "message": "Für diese Seite aus"
+  },
+  "popPaused": {
+    "message": "Pausiert bis $p1$",
+    "placeholders": {
+      "p1": {
+        "content": "$1"
+      }
+    }
+  },
+  "popSiteToggle": {
+    "message": "$p1$ schützen",
+    "placeholders": {
+      "p1": {
+        "content": "$1"
+      }
+    }
+  },
+  "popMode": {
+    "message": "Modus"
+  },
+  "modeAuto": {
+    "message": "Auto"
+  },
+  "modeAutoHint": {
+    "message": "Ersetzt sensible Daten beim Senden"
+  },
+  "modeReview": {
+    "message": "Prüfen"
+  },
+  "modeReviewHint": {
+    "message": "Zeigt Änderungen vor jedem Senden"
+  },
+  "modeOff": {
+    "message": "Aus"
+  },
+  "modeOffHint": {
+    "message": "Prüft nichts"
+  },
+  "popPause": {
+    "message": "1 Stunde pausieren"
+  },
+  "popResume": {
+    "message": "Jetzt fortsetzen"
+  },
+  "popScrubbed": {
+    "message": "Bisher $p1$ Einträge ersetzt",
+    "placeholders": {
+      "p1": {
+        "content": "$1"
+      }
+    }
+  },
+  "popClear": {
+    "message": "Sitzungsdaten löschen"
+  },
+  "popClearHint": {
+    "message": "Vergisst Platzhalter, Ihre Listen und den Zähler."
+  },
+  "popCleared": {
+    "message": "Gelöscht"
+  },
+  "popSettings": {
+    "message": "Einstellungen"
+  },
+  "optTitle": {
+    "message": "Einstellungen"
+  },
+  "optMode": {
+    "message": "Schutz"
+  },
+  "optEntities": {
+    "message": "Was ersetzt wird"
+  },
+  "optEntitiesDesc": {
+    "message": "Standardverhalten pro Datentyp ändern."
+  },
+  "colType": {
+    "message": "Typ"
+  },
+  "colAction": {
+    "message": "Aktion"
+  },
+  "actDefault": {
+    "message": "Standard"
+  },
+  "actReplace": {
+    "message": "Ersetzen"
+  },
+  "actAsk": {
+    "message": "Nachfragen"
+  },
+  "actNotice": {
+    "message": "Nur melden"
+  },
+  "actAllow": {
+    "message": "Unverändert lassen"
+  },
+  "optLists": {
+    "message": "Ihre Listen"
+  },
+  "optListsDesc": {
+    "message": "Nur auf diesem Gerät gespeichert, nie synchronisiert."
+  },
+  "optAllowed": {
+    "message": "Immer erlaubt"
+  },
+  "optAlways": {
+    "message": "Immer ersetzt"
+  },
+  "optEmpty": {
+    "message": "Noch nichts vorhanden."
+  },
+  "optRemove": {
+    "message": "Entfernen"
+  },
+  "optReset": {
+    "message": "Einstellungen zurücksetzen"
+  },
+  "optSaved": {
+    "message": "Gespeichert"
+  },
+  "optFooter": {
+    "message": "Open Source. Ihr Text verlässt nie Ihren Browser."
+  },
+  "nerTitle": {
+    "message": "Bessere Namenserkennung"
+  },
+  "nerDesc": {
+    "message": "Findet Namen, die die eingebaute Liste übersieht, in jeder Sprache. Läuft auf diesem Gerät. Ihre Nachrichten werden nie gesendet; nur die Modelldatei wird einmal von huggingface.co geladen (feste Version, Prüfsumme geprüft)."
+  },
+  "nerDownload": {
+    "message": "Modell laden ($p1$)",
+    "placeholders": {
+      "p1": {
+        "content": "$1"
+      }
+    }
+  },
+  "nerCancel": {
+    "message": "Abbrechen"
+  },
+  "nerInstalled": {
+    "message": "Installiert ($p1$ auf dem Datenträger)",
+    "placeholders": {
+      "p1": {
+        "content": "$1"
+      }
+    }
+  },
+  "nerRemove": {
+    "message": "Entfernen"
+  },
+  "nerFailed": {
+    "message": "Download fehlgeschlagen: $p1$",
+    "placeholders": {
+      "p1": {
+        "content": "$1"
+      }
+    }
+  },
+  "nerRetry": {
+    "message": "Erneut versuchen"
+  },
+  "ent_EMAIL_ADDRESS": {
+    "message": "E-Mail-Adresse"
+  },
+  "ent_PHONE_NUMBER": {
+    "message": "Telefonnummer"
+  },
+  "ent_CREDIT_CARD": {
+    "message": "Kartennummer"
+  },
+  "ent_IBAN_CODE": {
+    "message": "IBAN"
+  },
+  "ent_SSN": {
+    "message": "Sozialversicherungsnummer"
+  },
+  "ent_IP_ADDRESS": {
+    "message": "IP-Adresse"
+  },
+  "ent_IP_ADDRESS_PRIVATE": {
+    "message": "Private IP-Adresse"
+  },
+  "ent_CRYPTO": {
+    "message": "Krypto-Adresse"
+  },
+  "ent_SECRET_KEY": {
+    "message": "Geheimnis oder Schlüssel"
+  },
+  "ent_PERSON": {
+    "message": "Name"
+  },
+  "ent_LOCATION": {
+    "message": "Ort"
+  },
+  "ent_ORG": {
+    "message": "Organisation"
+  },
+  "ent_DATE_OF_BIRTH": {
+    "message": "Geburtsdatum"
+  },
+  "ent_FR_NIR": {
+    "message": "Franz. Sozialversicherungsnr."
+  },
+  "ent_CH_AHV": {
+    "message": "AHV-Nummer (CH)"
+  },
+  "ent_FR_SIRET": {
+    "message": "SIRET-Nummer"
+  },
+  "ent_FR_SIREN": {
+    "message": "SIREN-Nummer"
+  },
+  "ent_DE_TAX_ID": {
+    "message": "Steuer-ID"
+  },
+  "ent_DE_TAX_NUMBER": {
+    "message": "Steuernummer"
+  },
+  "ent_IT_VAT_CODE": {
+    "message": "Italienische USt-IdNr."
+  }
+}

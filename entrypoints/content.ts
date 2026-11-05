@@ -1,6 +1,7 @@
 import { resolveAdapter } from '../lib/adapters';
 import { SendGuard } from '../lib/intercept';
-import { applySettings } from '../lib/policy';
+import { applySettings, currentSettings } from '../lib/policy';
+import { setLists, type Lists } from '../lib/lists';
 import { setNerTransport, warmNer } from '../lib/detection/ner-client';
 import { NER_DETECT, type NerDetectResponse } from '../lib/detection/ner-messages';
 import { MSG } from '../lib/messages';
@@ -46,10 +47,21 @@ export default defineContentScript({
       warmNer();
     }, true);
 
-    // Load settings from storage then activate
-    browser.storage.sync
-      .get({ mode: 'strict', overrides: {} })
-      .then((s) => applySettings(s as Parameters<typeof applySettings>[0]));
+    // Settings: mode + overrides + per-site switch in sync; pause + lists in
+    // local (lists hold the user's own sensitive values: never sync them).
+    const host = location.hostname;
+    const loadSettings = async () => {
+      const sync = await browser.storage.sync.get({ mode: 'auto', overrides: {}, sitesOff: [] });
+      const local = await browser.storage.local.get({ pausedUntil: 0, lists: undefined });
+      applySettings({
+        mode: sync.mode as string,
+        overrides: sync.overrides as Record<string, never>,
+        siteOff: (sync.sitesOff as string[]).includes(host),
+        pausedUntil: local.pausedUntil as number,
+      });
+      setLists(local.lists as Partial<Lists> | undefined);
+    };
+    void loadSettings();
 
     const adapter = resolveAdapter();
 
@@ -59,6 +71,9 @@ export default defineContentScript({
     const guard = new SendGuard(adapter, {
       onScrub: (count) => {
         browser.runtime.sendMessage({ type: MSG.SCRUBBED, count }).catch(() => {});
+      },
+      onListChange: (lists) => {
+        void browser.storage.local.set({ lists });
       },
     });
     // Stateless: listeners live on `document`, so SPA remounts cannot open a gap.
@@ -78,22 +93,27 @@ export default defineContentScript({
     setTimeout(checkHealth, 4000);
     setInterval(checkHealth, 5000);
 
-    // Propagate settings changes from popup / options page in real-time
-    browser.storage.onChanged.addListener((changes) => {
-      const update: Record<string, unknown> = {};
-      if (changes.mode)     update.mode     = changes.mode.newValue;
-      if (changes.overrides) update.overrides = changes.overrides.newValue;
-      if (Object.keys(update).length) {
-        applySettings(update as Parameters<typeof applySettings>[0]);
-      }
+    // Propagate changes from the popup / options page in real time.
+    browser.storage.onChanged.addListener((changes, area) => {
+      if (area === 'sync' && (changes.mode || changes.overrides || changes.sitesOff)) void loadSettings();
+      if (area === 'local' && (changes.pausedUntil || changes.lists)) void loadSettings();
     });
 
     browser.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
       const type = (msg as { type?: string }).type;
       if (type === MSG.PANIC_CLEAR) {
         guard.clearMapping();
+        setLists(undefined);
       } else if (type === MSG.STATUS) {
-        sendResponse({ site: adapter.name, composerFound: adapter.findComposer() !== null });
+        const cur = currentSettings();
+        sendResponse({
+          site: adapter.name,
+          host,
+          composerFound: adapter.findComposer() !== null,
+          mode: cur.mode,
+          siteOff: cur.siteOff,
+          pausedUntil: cur.pausedUntil,
+        });
       }
     });
   },

@@ -99,7 +99,7 @@ export default defineBackground(() => {
     if (reason !== 'install') return;
     const existing = await browser.storage.sync.get(['mode', 'overrides']);
     await browser.storage.sync.set({
-      mode: existing.mode ?? 'strict',
+      mode: existing.mode ?? 'auto',
       overrides: existing.overrides ?? {},
     });
   });
