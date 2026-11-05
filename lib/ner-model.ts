@@ -6,7 +6,7 @@
  * Nothing is requested until `downloadModel` is called from a user click.
  * Pure of browser-extension APIs; the cache is injectable for tests.
  */
-import { NER_FILES, NER_MODEL_ID, NER_REVISION, NER_TOTAL_BYTES, nerFileUrl } from './ner-manifest';
+import { NER_FILES, type NerFile, NER_MODEL_ID, NER_REVISION, nerFileUrl } from './ner-manifest';
 
 export const CACHE_NAME = `pii-airlock-ner-${NER_REVISION.slice(0, 12)}`;
 const key = (path: string) => `https://ner.pii-airlock.invalid/${NER_MODEL_ID}/${NER_REVISION}/${path}`;
@@ -37,11 +37,14 @@ export async function sha256(data: Uint8Array): Promise<string> {
 const defaultStorage = (): CacheStorageLike => (globalThis as unknown as { caches: CacheStorageLike }).caches;
 
 /** True when every pinned file is present in the cache. */
-export async function isInstalled(storage: CacheStorageLike = defaultStorage()): Promise<boolean> {
+export async function isInstalled(
+  storage: CacheStorageLike = defaultStorage(),
+  files: readonly NerFile[] = NER_FILES,
+): Promise<boolean> {
   try {
     if (!(await storage.keys()).includes(CACHE_NAME)) return false;
     const cache = await storage.open(CACHE_NAME);
-    for (const f of NER_FILES) if (!(await cache.match(key(f.path)))) return false;
+    for (const f of files) if (!(await cache.match(key(f.path)))) return false;
     return true;
   } catch {
     return false;
@@ -86,16 +89,18 @@ async function fetchVerified(
  */
 export async function downloadModel(
   onProgress: (p: Progress) => void = () => {},
-  opts: { signal?: AbortSignal; fetch?: typeof fetch; storage?: CacheStorageLike } = {},
+  opts: { signal?: AbortSignal; fetch?: typeof fetch; storage?: CacheStorageLike; files?: readonly NerFile[] } = {},
 ): Promise<void> {
   const fetchFn = opts.fetch ?? fetch;
   const storage = opts.storage ?? defaultStorage();
+  const files = opts.files ?? NER_FILES;
+  const total = files.reduce((n, f) => n + f.bytes, 0);
   let loaded = 0;
   const verified: Array<[string, Uint8Array]> = [];
-  for (const f of NER_FILES) {
+  for (const f of files) {
     const data = await fetchVerified(f.path, f, fetchFn, (n) => {
       loaded += n;
-      onProgress({ loaded, total: NER_TOTAL_BYTES, file: f.path });
+      onProgress({ loaded, total, file: f.path });
     }, opts.signal);
     verified.push([f.path, data]);
   }
