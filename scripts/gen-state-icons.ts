@@ -34,7 +34,7 @@ for (const size of SIZES) {
         if (state === 'warn') { g.moveTo(cx, cy - r * 1.2); g.lineTo(cx + r * 1.2, cy); g.lineTo(cx, cy + r * 1.2); g.lineTo(cx - r * 1.2, cy); g.closePath(); }
         else g.arc(cx, cy, r, 0, Math.PI * 2);
       };
-      g.fillStyle = state === 'on' ? '#16a34a' : state === 'warn' ? '#f59e0b' : '#6b7280';
+      g.fillStyle = state === 'on' ? '#16a34a' : state === 'warn' ? '#f59e0b' : '#b4bac4';
       path(); g.fill();
     }, { src, size, state });
     await page.locator('#c').screenshot({ path: `public/icon-state/${state}-${size}.png`, omitBackground: true });
