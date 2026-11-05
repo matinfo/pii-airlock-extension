@@ -7,6 +7,7 @@
  * a remote CDN (invariant #3).
  */
 
+import * as nerMod from '../../lib/detection/ner';
 import { configureNerEnv, detectNer, resetNerState } from '../../lib/detection/ner';
 import { MSG } from '../../lib/messages';
 import {
@@ -40,7 +41,7 @@ browser.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
     } catch {
       detections = []; // fail-open
     }
-    sendResponse({ detections } satisfies NerDetectResponse);
+    sendResponse({ detections, ...(nerMod.lastNerError ? { error: nerMod.lastNerError } : {}) } satisfies NerDetectResponse);
   })();
   return true; // async sendResponse
 });

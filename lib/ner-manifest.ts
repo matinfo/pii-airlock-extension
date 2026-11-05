@@ -8,7 +8,15 @@
  */
 export const NER_MODEL_ID = 'Xenova/bert-base-multilingual-cased-ner-hrl';
 export const NER_REVISION = '263e82c06569c8c2ac46238a7ae5107598934234';
-export const NER_HOST = 'https://huggingface.co';
+/**
+ * Test hook: e2e builds may point at a loopback server (WXT_NER_HOST). Anything
+ * that is not loopback is ignored, so a release can only ever fetch from HF.
+ */
+const override = (import.meta as { env?: Record<string, string | undefined> }).env?.WXT_NER_HOST;
+export const NER_HOST =
+  override && /^http:\/\/(127\.0\.0\.1|localhost)(:\d+)?$/.test(override)
+    ? override
+    : 'https://huggingface.co';
 
 export interface NerFile {
   path: string;

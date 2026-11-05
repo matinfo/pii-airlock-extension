@@ -17,6 +17,8 @@ export interface NerDetectRequest {
 /** Reply from background/offscreen. Always resolves (fail-open → []). */
 export interface NerDetectResponse {
   detections: Detection[];
+  /** Why the names model produced nothing, if it failed. */
+  error?: string;
 }
 
 function hasType(msg: unknown, type: string): msg is NerDetectRequest {

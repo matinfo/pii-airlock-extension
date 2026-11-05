@@ -43,6 +43,21 @@ describe('mergeTokens (real model output)', () => {
     expect(ents.map((e) => text.slice(e.start, e.end))).toEqual(['Zoë van der Berg']);
   });
 
+  it('hyphenated surname the model split around an O-tagged hyphen stays one span', () => {
+    const text = 'please ask Oluwaseun Adeyemi-Okonkwo to call back';
+    const ents = mergeTokens(text, REAL[text]!);
+    expect(ents.map((e) => text.slice(e.start, e.end))).toEqual(['Oluwaseun Adeyemi-Okonkwo']);
+  });
+
+  it('a space-separated gap is NOT bridged', () => {
+    const text = 'Anna x Bob';
+    const toks: NerToken[] = [
+      { entity: 'B-PER', score: 0.9, index: 1, word: 'Anna' },
+      { entity: 'I-PER', score: 0.9, index: 3, word: 'Bob' },
+    ];
+    expect(mergeTokens(text, toks).map((e) => text.slice(e.start, e.end))).toEqual(['Anna', 'Bob']);
+  });
+
   it('B- after I- of same type starts a new entity', () => {
     const text = 'Anna Bob';
     const toks: NerToken[] = [

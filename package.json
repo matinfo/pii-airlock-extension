@@ -19,7 +19,7 @@
     "fetch:ner": "bun run scripts/fetch-ner-assets.ts",
     "compile": "tsc --noEmit",
     "test": "bun test tests/",
-    "e2e": "bun scripts/build-fixtures.ts && playwright test",
+    "e2e": "bun scripts/build-fixtures.ts && WXT_NER_HOST=http://127.0.0.1:4799 wxt build && playwright test",
     "postinstall": "wxt prepare"
   },
   "dependencies": {

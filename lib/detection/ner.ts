@@ -88,7 +88,9 @@ export function __setNerRunner(fn: NerRunner | null): void {
 export async function configureNerEnv(wasm: { mjs: string; wasm: string }): Promise<void> {
   const { env } = await import('@huggingface/transformers');
   const { makeModelCache } = await import('../ner-model');
-  env.allowRemoteModels = false;
+  // transformers refuses to start with both disabled. Remote stays "allowed"
+  // only on paper: the cache answers first and env.fetch below can never succeed.
+  env.allowRemoteModels = true;
   env.allowLocalModels = false;
   env.useBrowserCache = false;
   env.useCustomCache = true;
@@ -155,7 +157,11 @@ export function mergeTokens(text: string, tokens: NerToken[]): NerEntity[] {
     cursor = end;
     if (!m) { flush(); continue; }
     const [, bi, type] = m;
-    if (cur && bi === 'I' && cur.type === type && t.index === cur.index + 1) {
+    // The model sometimes tags a hyphen/apostrophe inside a name as O, so the
+    // wordpiece index skips one. Bridge that only across a bare connector.
+    const bridged =
+      cur !== null && t.index === cur.index + 2 && /^[-'’.]$/.test(text.slice(cur.end, at));
+    if (cur && bi === 'I' && cur.type === type && (t.index === cur.index + 1 || bridged)) {
       cur.end = end;
       cur.scores.push(t.score);
       cur.index = t.index;
@@ -194,6 +200,9 @@ export function chunkText(text: string): Array<[number, string]> {
   }
   return chunks;
 }
+
+/** Last failure message, for diagnostics (never contains user text). */
+export let lastNerError: string | null = null;
 
 let installedAt = 0;
 let installed = false;
@@ -260,8 +269,11 @@ export async function detectNer(text: string, _lang: string): Promise<Detection[
         });
       }
     }
+    lastNerError = null;
     return out;
-  } catch {
+  } catch (e) {
+    lastNerError = e instanceof Error ? e.message : String(e);
+    console.warn('[pii-airlock] names model unavailable:', e);
     return [];
   }
 }

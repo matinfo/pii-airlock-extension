@@ -141,7 +141,8 @@ export default defineBackground(() => {
       let detections: Detection[] = [];
       try {
         detections = await detect(msg.text, msg.lang);
-      } catch {
+      } catch (e) {
+        console.warn('[pii-airlock] names model request failed:', e);
         detections = [];
       }
       sendResponse({ detections } satisfies NerDetectResponse);

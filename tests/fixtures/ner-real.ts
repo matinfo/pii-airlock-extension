@@ -3,6 +3,68 @@
 import type { NerToken } from '../../lib/detection/ner';
 
 export const REAL: Record<string, NerToken[]> = {
+  "please ask Oluwaseun Adeyemi-Okonkwo to call back": [
+    {
+      "entity": "B-PER",
+      "score": 0.9999,
+      "index": 5,
+      "word": "Ol"
+    },
+    {
+      "entity": "I-PER",
+      "score": 0.8709,
+      "index": 6,
+      "word": "##uwa"
+    },
+    {
+      "entity": "I-PER",
+      "score": 0.9997,
+      "index": 7,
+      "word": "##se"
+    },
+    {
+      "entity": "I-PER",
+      "score": 0.9996,
+      "index": 8,
+      "word": "##un"
+    },
+    {
+      "entity": "I-PER",
+      "score": 0.9993,
+      "index": 9,
+      "word": "Ad"
+    },
+    {
+      "entity": "I-PER",
+      "score": 0.9986,
+      "index": 10,
+      "word": "##eye"
+    },
+    {
+      "entity": "I-PER",
+      "score": 0.9887,
+      "index": 11,
+      "word": "##mi"
+    },
+    {
+      "entity": "I-PER",
+      "score": 0.7928,
+      "index": 13,
+      "word": "Oko"
+    },
+    {
+      "entity": "I-PER",
+      "score": 0.9633,
+      "index": 14,
+      "word": "##nk"
+    },
+    {
+      "entity": "I-PER",
+      "score": 0.9329,
+      "index": 15,
+      "word": "##wo"
+    }
+  ],
   "Please email Jean Dupont-Lachapelle about the invoice.": [
     {
       "entity": "B-PER",
