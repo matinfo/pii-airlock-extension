@@ -21,7 +21,9 @@
     "compile": "tsc --noEmit",
     "test": "bun test tests/",
     "e2e": "bun scripts/build-fixtures.ts && WXT_NER_HOST=http://127.0.0.1:4799 wxt build && playwright test",
-    "postinstall": "wxt prepare"
+    "postinstall": "wxt prepare",
+    "shots": "bun scripts/build-fixtures.ts && WXT_NER_HOST=http://127.0.0.1:4799 wxt build && STORE_SHOTS=1 playwright test e2e/store-shots.spec.ts",
+    "promo": "bun scripts/store-promo.ts"
   },
   "dependencies": {
     "@huggingface/transformers": "^4.3.2",
