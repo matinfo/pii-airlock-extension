@@ -110,6 +110,20 @@ bun run e2e            # real-browser tests (Playwright)
 bun run zip            # package for store submission (zip:firefox, zip:edge, zip:all)
 ```
 
+### Building from source (store reviewers)
+
+Requirements: Linux or macOS, [Bun](https://bun.sh) 1.3.14 (pinned in `package.json`), Node not needed.
+
+```bash
+bun install --frozen-lockfile
+bun run zip:firefox    # → .output/pii-airlock-extension-<version>-firefox.zip
+```
+
+The build output is the Firefox package. The ONNX Runtime files in `public/wasm/`
+(`ort-wasm-simd-threaded.{mjs,wasm}`) are copied unmodified from the pinned
+`onnxruntime-web` npm package by `scripts/fetch-ner-assets.ts` during the build.
+The names model is never packaged; it is an opt-in download (see PRIVACY.md).
+
 Architecture, invariants and the checklist for adding a site are in [CLAUDE.md](CLAUDE.md).
 
 ---
