@@ -46,7 +46,7 @@ test('opt-in: download is verified, then an unlisted name is scrubbed', async ({
 
   const popup = await h.context.newPage();
   await popup.goto(`chrome-extension://${id}/popup.html`);
-  await expect(popup.getByText('Name detection: enhanced')).toBeVisible();
+  await expect(popup.getByText('Better name detection enabled')).toBeVisible();
   await popup.close();
 
   await h.setSettings(AUTO);
