@@ -142,17 +142,22 @@ function App() {
         {paused ? t("popResume") : t("popPause")}
       </button>
 
-      {names !== null && mode !== "off" && (
-        <section className={`names ${names ? "on" : ""}`}>
+      {names === true && mode !== "off" && (
+        <div className="names-on" title={t("popNamesOnSub")}>
+          <span className="dot" aria-hidden="true" />
+          {t("popNamesOn")}
+        </div>
+      )}
+
+      {names === false && mode !== "off" && (
+        <section className="names">
           <div>
-            <div className="status-text">{names ? t("popNamesOn") : t("popNamesOff")}</div>
-            <div className="status-sub">{names ? t("popNamesOnSub") : t("popNamesOffSub")}</div>
+            <div className="status-text">{t("popNamesOff")}</div>
+            <div className="status-sub">{t("popNamesOffSub")}</div>
           </div>
-          {!names && (
-            <button className="btn small" onClick={() => browser.tabs.create({ url: browser.runtime.getURL("/options.html#names" as never) })}>
-              {t("popNamesCta")}
-            </button>
-          )}
+          <button className="btn small" onClick={() => browser.tabs.create({ url: browser.runtime.getURL("/options.html#names" as never) })}>
+            {t("popNamesCta")}
+          </button>
         </section>
       )}
 

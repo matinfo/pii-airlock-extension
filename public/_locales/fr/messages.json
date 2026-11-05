@@ -180,10 +180,10 @@
     "message": "Effacé"
   },
   "popNamesOn": {
-    "message": "Détection des noms : renforcée"
+    "message": "Détection des noms renforcée"
   },
   "popNamesOnSub": {
-    "message": "Modèle local actif"
+    "message": "Fonctionne sur votre appareil, rien n’est envoyé"
   },
   "popNamesOff": {
     "message": "Détection des noms : de base"

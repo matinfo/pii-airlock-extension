@@ -180,10 +180,10 @@
     "message": "Gelöscht"
   },
   "popNamesOn": {
-    "message": "Namenserkennung: erweitert"
+    "message": "Bessere Namenserkennung aktiv"
   },
   "popNamesOnSub": {
-    "message": "Lokales Modell aktiv"
+    "message": "Läuft auf Ihrem Gerät, nichts wird gesendet"
   },
   "popNamesOff": {
     "message": "Namenserkennung: einfach"

@@ -180,10 +180,10 @@
     "message": "Cleared"
   },
   "popNamesOn": {
-    "message": "Name detection: enhanced"
+    "message": "Better name detection enabled"
   },
   "popNamesOnSub": {
-    "message": "Local model active"
+    "message": "Runs on your device, nothing is sent out"
   },
   "popNamesOff": {
     "message": "Name detection: basic"
