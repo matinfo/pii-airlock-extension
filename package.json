@@ -2,7 +2,7 @@
   "name": "pii-airlock-extension",
   "description": "Browser extension that automatically detects and scrubs PII from AI chat inputs",
   "private": true,
-  "version": "0.0.0",
+  "version": "0.1.0",
   "type": "module",
   "scripts": {
     "dev": "wxt",

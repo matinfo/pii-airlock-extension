@@ -112,3 +112,11 @@ bun run zip            # package for store submission (zip:firefox, zip:edge, zi
 Architecture, invariants and the checklist for adding a site are in [CLAUDE.md](CLAUDE.md).
 
 ---
+
+## Privacy, security, license
+
+- [PRIVACY.md](PRIVACY.md): what is stored and the one optional network request.
+- [SECURITY.md](SECURITY.md): how to report a vulnerability.
+- [MIT License](LICENSE).
+
+---
