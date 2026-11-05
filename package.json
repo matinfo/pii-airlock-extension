@@ -46,7 +46,7 @@
     "prosemirror-schema-basic": "^1.2.5",
     "prosemirror-state": "^1.4.4",
     "prosemirror-view": "^1.42.9",
-    "typescript": "^5.9.3",
+    "typescript": "^7.0.2",
     "wxt": "^0.20.27"
   }
 }
