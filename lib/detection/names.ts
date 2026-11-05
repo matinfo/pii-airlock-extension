@@ -47,3 +47,13 @@ export const NAME_PAIR_RE = new RegExp(
   String.raw`(?<![\p{L}\p{N}])(${CAP_WORD})(?: (?:(?:de|du|von|van|der|le|la|di|da|del) )?${CAP_WORD}){1,2}(?![\p{L}\p{N}])`,
   'gu',
 );
+
+/**
+ * "M. Bllaca", "Mme Dupont", "Dr. Keller": an honorific followed by a
+ * capitalised word is a person even when no list knows the surname. Group 1 is
+ * the name only (the title itself is not PII).
+ */
+export const TITLE_NAME_RE = new RegExp(
+  String.raw`(?<![\p{L}\p{N}])(?:M|MM|Mme|Mmes|Mlle|Mr|Mrs|Ms|Mx|Dr|Dre|Pr|Prof|Me|Maître|Maitre|Herr|Frau|Hr|Fr|Sig|Sigra|Dott|Sr|Sra|Don|Doña)(?:\.|(?=\s))\s*(${CAP_WORD}(?: (?:(?:de|du|von|van|der|le|la|di|da|del) )?${CAP_WORD}){0,2})(?![\p{L}\p{N}])`,
+  'gu',
+);

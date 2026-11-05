@@ -18,6 +18,7 @@ const secret = (value: string) => ({ value, types: ['SECRET_KEY'] });
 const phone = (value: string) => ({ value, types: ['PHONE_NUMBER'] });
 
 export const BENIGN: Case[] = [
+  { text: 'Tell me what you think about the M. version', pii: [] },
   { text: 'What is the capital of France?', pii: [], note: 'location is notify-only' },
   { text: 'Meeting at 12:30:45 tomorrow', pii: [], note: 'time is not IPv6' },
   { text: 'The logs show 10:15:30 and 23:59:59 for both events', pii: [] },
@@ -77,6 +78,9 @@ export const POSITIVE: Case[] = [
   // names (always-on layer; transformer NER improves recall further)
   { text: 'Bonjour, je suis Jean Dupont', pii: [{ value: 'Jean Dupont', types: ['PERSON'] }] },
   { text: 'Please email Marie-Claire Lefebvre about it', pii: [{ value: 'Marie-Claire Lefebvre', types: ['PERSON'] }] },
+  { text: 'Concernant M. Bllaca, ces absences sont problématiques', pii: [{ value: 'Bllaca', types: ['PERSON'] }] },
+  { text: 'Mme Dupont-Lachapelle a appelé hier', pii: [{ value: 'Dupont-Lachapelle', types: ['PERSON'] }] },
+  { text: 'Please forward this to Dr. Okonkwo today', pii: [{ value: 'Okonkwo', types: ['PERSON'] }] },
   { text: 'Hans Müller wohnt in Berlin', pii: [{ value: 'Hans Müller', types: ['PERSON'] }] },
 ];
 

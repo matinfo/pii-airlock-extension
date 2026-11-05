@@ -11,7 +11,7 @@
 
 import type { Detection } from './types';
 import nlp from 'compromise';
-import { NAME_PAIR_RE, isFirstName } from './names';
+import { NAME_PAIR_RE, TITLE_NAME_RE, isFirstName } from './names';
 
 /**
  * Languages whose script compromise cannot tokenise — NLP produces only noise,
@@ -96,6 +96,18 @@ export async function detectNlp(text: string, lang: string): Promise<Detection[]
           source: 'nlp',
         });
       }
+    }
+
+    for (const m of text.matchAll(TITLE_NAME_RE)) {
+      const start = m.index! + m[0].lastIndexOf(m[1]!);
+      results.push({
+        entityType: 'PERSON',
+        start,
+        end: start + m[1]!.length,
+        score: 0.8,
+        value: m[1]!,
+        source: 'nlp',
+      });
     }
 
     return results;
