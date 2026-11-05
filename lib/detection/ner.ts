@@ -160,7 +160,7 @@ export function mergeTokens(text: string, tokens: NerToken[]): NerEntity[] {
     const end = at + piece.length;
     cursor = end;
     if (!m) { flush(); continue; }
-    const [, bi, type] = m;
+    const [, bi, type] = m as unknown as [string, string, string];
     // The model sometimes tags a hyphen/apostrophe inside a name as O, so the
     // wordpiece index skips one. Bridge that only across a bare connector.
     const bridged =
