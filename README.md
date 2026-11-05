@@ -92,6 +92,7 @@ Other sites are not supported: the extension does not run on them, and requests 
 - It reduces risk, it does not remove it: detection cannot guarantee 100% recall, especially for names without the optional model.
 - File attachments, voice input and screenshots are not covered.
 - Site UIs change. A redesign can break an adapter; the popup then says no composer was found instead of claiming protection.
+- Showing your real values in the chat's answers is display only, but it happens in the page's DOM: the chat site's own scripts could read those values there. The message that is *sent* only ever contains placeholders.
 - The chat's own "Copy" button copies placeholders, not your real values. Old chats reopened after a browser restart show placeholders.
 
 ---
