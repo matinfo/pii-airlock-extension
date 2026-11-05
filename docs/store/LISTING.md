@@ -16,6 +16,7 @@ PII Airlock
 Replaces personal data in your AI chat messages with placeholders before they are sent. On-device, no account, no server.
 
 ## Description
+<!-- Chrome rejected a version that listed product names (keyword spam, ref Yellow Argon). Do not list brand names in the store description; they live in README.md and the host-permission justification. -->
 PII Airlock checks what you type in an AI chat and replaces personal data with placeholders before the message is sent. Everything runs in your browser. There is no account, no server and no analytics.
 
 How it works
@@ -25,7 +26,7 @@ How it works
 - If the check fails for any reason, the message is not sent. You can edit it or explicitly send it unchecked.
 
 Works on
-ChatGPT, Claude, Gemini, Copilot, Perplexity and Mistral Le Chat. No other site is touched.
+The most popular AI chat websites. The full list of supported sites is kept up to date on the project page (see Homepage link). No other site is touched.
 
 Modes
 - Auto (default): replaces sensitive data silently.
@@ -34,12 +35,12 @@ Modes
 - Allow and deny lists, and per-type overrides.
 
 Optional better name detection
-Turn it on in Options to download an on-device model (about 181 MB, once, from a pinned Hugging Face version, checksum verified). It is multilingual and catches unusual surnames. Your text is never part of that download.
+Turn it on in Settings to download an on-device model (about 181 MB, once, from a pinned Hugging Face version, checksum verified). It is multilingual and catches unusual surnames. Your text is never part of that download.
 
 Privacy
 - Your text never leaves your device.
 - Placeholder mappings live in memory for the tab, never on disk.
-- Permissions are limited to storage and the six supported chat sites.
+- Permissions are limited to storage and the supported chat sites.
 
 Limits
 Detection reduces risk but cannot guarantee that everything is found. File attachments, voice input and screenshots are not covered.
