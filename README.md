@@ -73,7 +73,7 @@ Verified on the live site:
 - gemini.google.com
 - copilot.microsoft.com, copilot.cloud.microsoft
 - perplexity.ai
-- chat.mistral.ai (Le Chat)
+- chat.mistral.ai (Le Chat - Vibe)
 
 Other sites are not supported: the extension does not run on them, and requests no permission for them. Adapters for Poe, Character.ai, Hugging Face Chat and You.com exist in the code but are not shipped until they have been verified in a real browser.
 

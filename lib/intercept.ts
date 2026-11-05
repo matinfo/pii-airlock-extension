@@ -47,7 +47,8 @@ export interface GuardOptions {
 
 type Origin =
   | { kind: 'key'; event: KeyboardEvent }
-  | { kind: 'click'; target: HTMLElement }
+  /** `replay`: the button was not a recognised send button; re-issue ITS click, not the adapter's send. */
+  | { kind: 'click'; target: HTMLElement; replay?: boolean }
   | { kind: 'submit'; form: HTMLFormElement };
 
 interface Ctx {
@@ -124,6 +125,10 @@ export class SendGuard {
   /** Items the user unticked for the current message (type|value keys). */
   private excluded = new Set<string>();
   private scanSeq = 0;
+  /** Items the last live scan wants replaced (0 = clean or unknown). */
+  private pendingItems = 0;
+  /** An edit happened and its scan has not finished yet. */
+  private scanQueued = false;
   private scanTimer: ReturnType<typeof setTimeout> | undefined;
   private liveEditable: HTMLElement | null = null;
 
@@ -201,11 +206,17 @@ export class SendGuard {
     const btn = buttonFrom(e);
     if (!btn) return;
     const composer = this.adapter.findComposer();
-    if (!composer || !this.isSendButton(btn, composer)) return;
+    if (!composer) return;
+    const known = this.isSendButton(btn, composer);
+    // Safety net for send buttons we cannot recognise (translated or redesigned
+    // UI): any plain button in the composer's own container, clicked while the box
+    // may hold PII, is checked first and then re-clicked. A real send goes through;
+    // a toggle or attach button just works as before, after the check.
+    if (!known && !this.maybeUnknownSend(btn, composer)) return;
 
     e.preventDefault();
     e.stopImmediatePropagation();
-    this.start({ editable: composer, origin: { kind: 'click', target: btn } });
+    this.start({ editable: composer, origin: { kind: 'click', target: btn, replay: !known } });
   }
 
   private handleSubmit(e: Event): void {
@@ -220,6 +231,19 @@ export class SendGuard {
     e.preventDefault();
     e.stopImmediatePropagation();
     this.start({ editable, origin: { kind: 'submit', form } });
+  }
+
+  /** Buttons that open menus or toggle state are never a send action. */
+  private static readonly NOT_SEND =
+    '[aria-haspopup]:not([aria-haspopup="false"]), [aria-expanded], [aria-pressed], [role="menuitem"], [role="tab"], [role="switch"], [role="combobox"], a[href]';
+
+  private maybeUnknownSend(btn: HTMLElement, composer: HTMLElement): boolean {
+    if (btn.matches(SendGuard.NOT_SEND) || btn.closest(SendGuard.NOT_SEND)) return false;
+    const scope = composerScope(composer);
+    if (scope === document || !scope.contains(btn) || composer.contains(btn)) return false;
+    if (!this.read(composer).trim()) return false;
+    // PII known from the live scan, or the scan has not caught up with the last edit.
+    return this.pendingItems > 0 || this.scanQueued;
   }
 
   /** A button is a send button if it sits in the composer's scope AND looks like one. */
@@ -252,6 +276,7 @@ export class SendGuard {
     // a scan then would re-draw the chip over a message that is already leaving.
     if (this._busy || this._sending) return;
     this.liveEditable = editable;
+    this.scanQueued = true;
     clearTimeout(this.scanTimer);
     this.scanTimer = setTimeout(() => void this.scan(editable), 350);
   }
@@ -271,14 +296,21 @@ export class SendGuard {
   private async scan(editable: HTMLElement): Promise<void> {
     const seq = ++this.scanSeq;
     if (!isActive()) {
+      this.pendingItems = 0; this.scanQueued = false;
       shield.render({ items: [], notices: [], mode: 'auto', paused: currentSettings().mode !== 'off' && !currentSettings().siteOff });
       return;
     }
     const text = this.read(editable);
-    if (!text.trim()) { this.excluded.clear(); shield.render({ items: [], notices: [], mode: 'auto', paused: false }); return; }
+    if (!text.trim()) {
+      this.pendingItems = 0; this.scanQueued = false;
+      this.excluded.clear(); shield.render({ items: [], notices: [], mode: 'auto', paused: false }); return;
+    }
     const r = await this.analyze(text, { skipNer: true });
     if (seq !== this.scanSeq || r.error || this._busy) return;
-    shield.render(this.chipState(r.detections));
+    const state = this.chipState(r.detections);
+    this.pendingItems = state.items.length;
+    this.scanQueued = false;
+    shield.render(state);
   }
 
   private chipState(detections: Detection[]) {
@@ -480,6 +512,8 @@ export class SendGuard {
       // Drop any scan still pending or in flight: it describes the sent message.
       clearTimeout(this.scanTimer);
       this.scanSeq++;
+      this.pendingItems = 0;
+      this.scanQueued = false;
       this.excluded.clear();
       shield.render({ items: [], notices: [], mode: 'auto', paused: false });
     }
@@ -517,6 +551,8 @@ export class SendGuard {
 
       if (ctx.origin.kind === 'submit') {
         ctx.origin.form.requestSubmit();
+      } else if (ctx.origin.kind === 'click' && ctx.origin.replay) {
+        ctx.origin.target.click(); // not a known send button: replay exactly what the user clicked
       } else if (isMain) {
         await this.waitForSendButton(composer);
         this.adapter.triggerSend(composer);

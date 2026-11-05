@@ -509,3 +509,74 @@ test('an unrelated button elsewhere is not hijacked (wider scope stays safe)', a
   await settle(3);
   expect(clicked).toBe(true);
 });
+
+// --- safety net: send buttons we cannot recognise ---------------------------
+
+function unknownButtonPage(extra = '', text = 'my mail jane@example.com') {
+  document.body.innerHTML = `<div><div><div><div>
+    <div id="ed" contenteditable="true">${text}</div></div></div>
+    <div><button id="go" aria-label="???"></button>${extra}</div></div></div>`;
+  const composer = document.getElementById('ed')!;
+  const sends: number[] = [];
+  const adapter: ChatAdapter = {
+    name: 'fake', findComposer: () => composer, findSendButton: () => null,
+    getText: (c) => c.textContent ?? '', setText: (c, t) => { c.textContent = t; },
+    triggerSend: () => { sends.push(1); },
+  };
+  return { composer, sends, adapter };
+}
+
+test('unrecognised button + PII in the box: checked first, then the SAME click is replayed', async () => {
+  const f = unknownButtonPage();
+  guard(f.adapter);
+  f.composer.dispatchEvent(new Event('input', { bubbles: true })); // the user just typed / pasted
+  const seen: string[] = [];
+  document.getElementById('go')!.addEventListener('click', () => seen.push(f.composer.textContent ?? ''));
+  document.getElementById('go')!.click();
+  await settle();
+  expect(seen.length).toBe(1);                       // the page got the click, once
+  expect(seen[0]).not.toContain('jane@example.com'); // ...only after the text was scrubbed
+  expect(f.sends.length).toBe(0);                    // adapter.triggerSend not used: the user's own click was replayed
+});
+
+test('unrecognised button + clean text: works as before', async () => {
+  const f = unknownButtonPage('', 'the weather is nice');
+  guard(f.adapter);
+  f.composer.dispatchEvent(new Event('input', { bubbles: true }));
+  await new Promise((r) => setTimeout(r, 600));
+  await settle(3);
+  let clicks = 0;
+  document.getElementById('go')!.addEventListener('click', () => clicks++);
+  document.getElementById('go')!.click();
+  await settle(3);
+  expect(clicks).toBe(1);
+  expect(f.composer.textContent).toBe('the weather is nice');
+});
+
+test('menu / toggle buttons are never treated as send', async () => {
+  const f = unknownButtonPage('<button id="menu" aria-haspopup="menu"></button><button id="tgl" aria-pressed="false"></button>');
+  guard(f.adapter);
+  f.composer.dispatchEvent(new Event('input', { bubbles: true }));
+  await new Promise((r) => setTimeout(r, 600));
+  let hits = 0;
+  for (const id of ['menu', 'tgl']) {
+    document.getElementById(id)!.addEventListener('click', () => hits++);
+    document.getElementById(id)!.click();
+  }
+  await settle(3);
+  expect(hits).toBe(2);
+  expect(f.composer.textContent).toContain('jane@example.com'); // untouched: nothing was scrubbed
+});
+
+test('a button outside the composer container is left alone', async () => {
+  const f = unknownButtonPage();
+  document.body.insertAdjacentHTML('beforeend', '<footer><button id="far"></button></footer>');
+  guard(f.adapter);
+  f.composer.dispatchEvent(new Event('input', { bubbles: true }));
+  let clicks = 0;
+  document.getElementById('far')!.addEventListener('click', () => clicks++);
+  document.getElementById('far')!.click();
+  await settle(3);
+  expect(clicks).toBe(1);
+  expect(f.composer.textContent).toContain('jane@example.com');
+});
