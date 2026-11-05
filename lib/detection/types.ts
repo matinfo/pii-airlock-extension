@@ -7,7 +7,7 @@ export interface Detection {
   end: number;          // exclusive char offset
   score: number;        // 0–1 confidence
   value: string;        // the matched text slice
-  source: 'regex' | 'nlp';
+  source: 'regex' | 'nlp' | 'ner';
 }
 
 /** Risk classification of a detected entity. */
@@ -21,6 +21,10 @@ export interface DetectionResult {
   detections: Detection[];
   topTier: RiskTier | null;   // highest tier found, or null if nothing found
   decision: Decision;          // computed by policy engine
+  /** True when detection itself failed. `detections` is then NOT trustworthy: never scrub-and-send. */
+  error?: boolean;
+  /** The optional names model did not answer in time; only regex + compromise decided. */
+  nerTimedOut?: boolean;
 }
 
 /** A stable token replacing a PII span, e.g. "<EMAIL_ADDRESS_1>". */

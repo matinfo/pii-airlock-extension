@@ -14,7 +14,7 @@ export interface ChatAdapter {
    * Find the send button associated with the composer.
    * Returns null if not determinable (keyboard-only intercept is used instead).
    */
-  findSendButton(): HTMLElement | null;
+  findSendButton(composer?: HTMLElement): HTMLElement | null;
 
   /**
    * Read the current text content from the composer element.

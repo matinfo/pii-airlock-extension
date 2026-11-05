@@ -1,0 +1,110 @@
+/** Shared DOM helpers for adapters. */
+
+/**
+ * Replace all text in a rich contenteditable editor (ProseMirror, Quill,
+ * Lexical, Draft, etc.).
+ *
+ * These editors keep their own internal document model and serialise from it
+ * on send. Mutating `innerHTML`/`innerText` directly changes the visible DOM
+ * but NOT that model — and the editor's mutation observer often reverts the
+ * change — so the original text is still sent. That is a PII leak: the message
+ * looks scrubbed while the raw value goes out.
+ *
+ * Routing the replacement through `execCommand('insertText')` fires the native
+ * beforeinput/input events the editor listens for, committing the new text to
+ * its internal state. `execCommand` is deprecated but remains the reliable
+ * cross-editor path; callers must still verify the composer post-condition
+ * before sending (see SendInterceptor.doScrubAndSend) in case it no-ops.
+ */
+export function replaceContentEditable(composer: HTMLElement, text: string): void {
+  composer.focus();
+  const sel = window.getSelection();
+  const range = document.createRange();
+  range.selectNodeContents(composer);
+  sel?.removeAllRanges();
+  sel?.addRange(range);
+
+  const inserted = document.execCommand('insertText', false, text);
+  if (!inserted) {
+    // Fallback: a cancelable beforeinput the editor can act on.
+    composer.dispatchEvent(
+      new InputEvent('beforeinput', {
+        bubbles: true,
+        cancelable: true,
+        inputType: 'insertReplacementText',
+        data: text,
+      }),
+    );
+  }
+}
+
+/**
+ * Second-chance write for rich editors that mishandle `execCommand('insertText')`
+ * (Lexical drops everything after a newline, and reads a stale selection if it is
+ * used in the same tick). Select everything, let the editor sync its selection,
+ * then hand it the text as a paste: editors parse pastes natively, newlines
+ * included. Callers verify the result.
+ */
+export async function pasteReplace(composer: HTMLElement, text: string): Promise<void> {
+  composer.focus();
+  const sel = window.getSelection();
+  const range = document.createRange();
+  range.selectNodeContents(composer);
+  sel?.removeAllRanges();
+  sel?.addRange(range);
+  await new Promise((r) => setTimeout(r, 60));
+  try {
+    const data = new DataTransfer();
+    data.setData('text/plain', text);
+    composer.dispatchEvent(new ClipboardEvent('paste', { clipboardData: data, bubbles: true, cancelable: true }));
+  } catch {
+    /* no ClipboardEvent/DataTransfer support: the caller's verification fails closed */
+  }
+}
+
+/**
+ * The container that owns a composer and its send button: the enclosing form,
+ * else a few ancestors up. Send-button lookups are limited to this scope so a
+ * generic selector like `button[type=submit]` can't match an unrelated button
+ * elsewhere on the page.
+ */
+export function composerScope(composer: HTMLElement | null): ParentNode {
+  if (!composer) return document;
+  const form = composer.closest('form');
+  if (form) return form;
+  // Climb to the smallest container that holds the composer's controls. Modern
+  // chat UIs nest the send button 4-6 levels away (Gemini), so go up to 6, but
+  // never past <body> and never into a container that also holds another editable
+  // (an edit-message box or a second composer).
+  let el: HTMLElement = composer;
+  for (let i = 0; i < 6 && el.parentElement && el.parentElement !== document.body; i++) {
+    const up = el.parentElement;
+    if (up.querySelectorAll('textarea, [contenteditable]:not([contenteditable="false"])').length > 1) break;
+    el = up;
+  }
+  return el;
+}
+
+/** querySelector limited to the composer's scope. */
+export function queryInScope<T extends HTMLElement = HTMLElement>(
+  composer: HTMLElement | null,
+  selector: string,
+): T | null {
+  return composerScope(composer).querySelector<T>(selector);
+}
+
+/** textarea / text input: read via `.value`, never innerText (which is empty). */
+export function isTextControl(el: HTMLElement): el is HTMLTextAreaElement | HTMLInputElement {
+  return el instanceof HTMLTextAreaElement || el instanceof HTMLInputElement;
+}
+
+/** Set a text control's value in a way React-style frameworks notice. */
+export function setTextControl(el: HTMLTextAreaElement | HTMLInputElement, text: string): void {
+  const proto = el instanceof HTMLTextAreaElement
+    ? window.HTMLTextAreaElement.prototype
+    : window.HTMLInputElement.prototype;
+  const setter = Object.getOwnPropertyDescriptor(proto, 'value')?.set;
+  if (setter) setter.call(el, text);
+  else el.value = text;
+  el.dispatchEvent(new Event('input', { bubbles: true }));
+}

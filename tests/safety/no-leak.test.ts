@@ -10,6 +10,7 @@
 
 import { describe, it, expect } from 'bun:test';
 import { detectRegex } from '../../lib/detection/regex';
+import { analyze } from '../../lib/detection/engine';
 import { BrowserMapping } from '../../lib/mapping';
 
 function scrubText(text: string): string {
@@ -157,5 +158,40 @@ describe('Round-trip: restore(scrub(text)) === original', () => {
   it('no-PII text round-trips unchanged', () => {
     const t = 'what is the capital of France?';
     expect(roundTrip(t)).toBe(t);
+  });
+});
+
+// ── NLP names through the full engine (non-English) ─────────────────────────────
+//
+// Regression for the reported leak: a French sentence whose names were either
+// not detected (language gate) or detected-but-not-removed. Runs the real
+// async `analyze` pipeline, then asserts the scrubbed text the user would send
+// contains none of the names.
+
+describe('No-leak: NLP names in French are detected and scrubbed', () => {
+  async function scrubViaEngine(text: string): Promise<string> {
+    const { detections } = await analyze(text);
+    return new BrowserMapping().scrub(text, detections);
+  }
+
+  it('scrubs marie (lowercase), Mathieu and Paris from a French sentence', async () => {
+    const text = 'Bonjour marie tu vas à Paris ce soir (test de Mathieu)';
+    const scrubbed = await scrubViaEngine(text);
+    // The names must not survive into the sent message.
+    expect(scrubbed).not.toContain('marie');
+    expect(scrubbed).not.toContain('Mathieu');
+    expect(scrubbed).not.toContain('Paris');
+    // And tokens must be present.
+    expect(scrubbed).toMatch(/<PERSON_\d+>/);
+    expect(scrubbed).toMatch(/<LOCATION_\d+>/);
+    // Surrounding non-PII French is preserved.
+    expect(scrubbed).toContain('Bonjour');
+    expect(scrubbed).toContain('ce soir');
+  });
+
+  it('does not over-scrub lowercase common words (the verb "vas")', async () => {
+    const { detections } = await analyze('Bonjour marie tu vas à Paris ce soir (test de Mathieu)');
+    // "vas"/"va" must never be detected as a LOCATION.
+    expect(detections.some((d) => d.value === 'vas' || d.value === 'va')).toBe(false);
   });
 });

@@ -1,16 +1,14 @@
 /**
- * Policy engine — maps detected PII entities to risk tiers and decisions.
+ * Policy engine — maps detected PII entities to decisions.
  *
- * Default policy matrix:
+ * Modes:
+ *   auto    (default)  structured data + names are replaced silently; places,
+ *                      organisations and private IPs are only noticed.
+ *   review             the same set is shown in a panel before sending.
+ *   off                nothing is checked.
  *
- *   Tier      strict mode     permissive mode
- *   ────────────────────────────────────────
- *   high    → block           auto_scrub
- *   medium  → auto_scrub      warn
- *   low     → warn            notify
- *   none    → allow           allow
- *
- * Users can override the mode in Options (stored in browser.storage.sync).
+ * Per-entity overrides (Options) win over the mode. Per-site off and a timed
+ * pause live here too, so every caller asks one place whether to act at all.
  */
 
 import type { Detection, Decision, RiskTier } from './detection/types';
@@ -28,11 +26,32 @@ const HIGH_RISK = new Set([
   'IP_ADDRESS',
   'CRYPTO',
   'SECRET_KEY',
+  'FR_NIR',
+  'CH_AHV',
+  'FR_SIRET',
+  'FR_SIREN',
+  'DE_TAX_ID',
+  'DE_TAX_NUMBER',
+  'IT_VAT_CODE',
 ]);
 
+/** Medium tier = names/places/orgs (kept for the options table). */
 const MEDIUM_RISK = new Set(['PERSON', 'LOCATION', 'ORG']);
 
-const LOW_RISK = new Set(['DATE_OF_BIRTH']);
+const LOW_RISK = new Set(['DATE_OF_BIRTH', 'IP_ADDRESS_PRIVATE']);
+
+/**
+ * Entities that are informational only by default: far too common in ordinary
+ * prose ("capital of France", "compare Google and Microsoft") to rewrite or
+ * interrupt. Users can still force a decision with a per-entity override.
+ */
+const NOTIFY_ONLY = new Set(['LOCATION', 'ORG', 'IP_ADDRESS_PRIVATE']);
+/** Subset of NOTIFY_ONLY that shows no notice at all. */
+const QUIET = new Set(['LOCATION', 'ORG']);
+
+export function isQuiet(entityType: string): boolean {
+  return QUIET.has(entityType);
+}
 
 export function tierOf(entityType: string): RiskTier {
   if (HIGH_RISK.has(entityType)) return 'high';
@@ -46,36 +65,57 @@ export function tierOf(entityType: string): RiskTier {
 // Settings (read from storage; defaults applied here)
 // ---------------------------------------------------------------------------
 
+export type Mode = 'auto' | 'review' | 'off';
+
 export interface PolicySettings {
-  mode: 'strict' | 'permissive';
-  /** Per-entity overrides: entityType → decision (overrides matrix) */
+  mode: Mode;
+  /** Per-entity overrides: entityType → decision (wins over the mode). */
   overrides: Record<string, Decision>;
+  /** This site is switched off by the user. */
+  siteOff: boolean;
+  /** Epoch ms until which protection is paused (0 = not paused). */
+  pausedUntil: number;
+  /** Show the short "N items replaced" note after a message is sent. */
+  confirmAfterSend: boolean;
 }
 
 export const DEFAULT_SETTINGS: PolicySettings = {
-  mode: 'strict',
+  mode: 'auto',
   overrides: {},
+  siteOff: false,
+  pausedUntil: 0,
+  confirmAfterSend: true,
 };
 
 let _settings: PolicySettings = DEFAULT_SETTINGS;
 
-export function applySettings(s: Partial<PolicySettings>): void {
-  _settings = { ...DEFAULT_SETTINGS, ..._settings, ...s };
+/** Accepts the pre-1.0 `strict` / `permissive` values and maps them to `auto`. */
+function normalizeMode(m: unknown): Mode {
+  return m === 'review' || m === 'off' ? m : 'auto';
+}
+
+export function applySettings(s: Partial<Omit<PolicySettings, 'mode'>> & { mode?: string }): void {
+  const next = { ..._settings, ...s } as PolicySettings;
+  next.mode = normalizeMode(s.mode ?? _settings.mode);
+  _settings = next;
 }
 
 export function currentSettings(): PolicySettings {
   return _settings;
 }
 
+/** False when protection is off, switched off for this site, or paused. */
+export function isActive(now: number = Date.now()): boolean {
+  return _settings.mode !== 'off' && !_settings.siteOff && now >= _settings.pausedUntil;
+}
+
 // ---------------------------------------------------------------------------
 // Decision matrix
 // ---------------------------------------------------------------------------
 
-function decisionFromTier(tier: RiskTier, mode: 'strict' | 'permissive'): Decision {
-  if (tier === 'high') return mode === 'strict' ? 'block' : 'auto_scrub';
-  if (tier === 'medium') return mode === 'strict' ? 'auto_scrub' : 'warn';
-  // low
-  return mode === 'strict' ? 'warn' : 'notify';
+function decisionFromMode(mode: Mode): Decision {
+  if (mode === 'off') return 'allow';
+  return mode === 'review' ? 'warn' : 'auto_scrub';
 }
 
 /**
@@ -89,12 +129,33 @@ export function getDecision(detections: Detection[]): Decision {
   let worst: Decision = 'allow';
 
   for (const d of detections) {
-    const override = _settings.overrides[d.entityType];
-    const decision = override ?? decisionFromTier(tierOf(d.entityType), _settings.mode);
+    const decision = decisionFor(d);
     if (order.indexOf(decision) < order.indexOf(worst)) {
       worst = decision;
     }
   }
 
   return worst;
+}
+
+/** Decision for a single detection (override, else tier × mode). */
+export function decisionFor(d: Detection): Decision {
+  if (_settings.mode === 'off') return 'allow';
+  const override = _settings.overrides[d.entityType];
+  if (override) return override;
+  if (NOTIFY_ONLY.has(d.entityType)) return 'notify';
+  return decisionFromMode(_settings.mode);
+}
+
+/** What the mode alone would do for an entity type (ignores overrides). */
+export function defaultDecisionFor(entityType: string, mode: Mode): Decision {
+  if (mode === 'off') return 'allow';
+  if (NOTIFY_ONLY.has(entityType)) return 'notify';
+  return decisionFromMode(mode);
+}
+
+/** True when this detection must be replaced before the text may leave. */
+export function mustScrub(d: Detection): boolean {
+  const dec = decisionFor(d);
+  return dec === 'block' || dec === 'auto_scrub' || dec === 'warn';
 }

@@ -9,6 +9,7 @@ lerna-debug.log*
 
 node_modules
 .output
+.output-e2e
 stats.html
 stats-*.json
 .wxt
@@ -24,3 +25,10 @@ web-ext.config.ts
 *.njsproj
 *.sln
 *.sw?
+
+# NER assets (fetched by scripts/fetch-ner-assets.ts)
+public/models/
+public/wasm/
+e2e/.dist
+test-results
+.cache/

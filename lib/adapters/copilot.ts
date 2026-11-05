@@ -1,6 +1,7 @@
-/** Adapter for copilot.microsoft.com. */
+/** Adapter for copilot.microsoft.com and copilot.cloud.microsoft (Microsoft 365 Copilot). */
 
 import type { ChatAdapter } from './types';
+import { replaceContentEditable, queryInScope } from './dom';
 
 export const copilotAdapter: ChatAdapter = {
   name: 'copilot',
@@ -10,15 +11,19 @@ export const copilotAdapter: ChatAdapter = {
       document.querySelector<HTMLElement>('#userInput') ??
       document.querySelector<HTMLElement>('textarea[placeholder*="Message"]') ??
       document.querySelector<HTMLElement>('textarea[aria-label*="chat" i]') ??
+      // copilot.cloud.microsoft: rich contenteditable textbox instead of a textarea.
+      document.querySelector<HTMLElement>('#m365-chat-editor-target-element') ??
+      document.querySelector<HTMLElement>('[role="textbox"][contenteditable="true"]') ??
       null
     );
   },
 
-  findSendButton(): HTMLElement | null {
+  findSendButton(composer?: HTMLElement): HTMLElement | null {
+    const c = composer ?? this.findComposer();
     return (
-      document.querySelector<HTMLElement>('button[aria-label*="Submit" i]') ??
-      document.querySelector<HTMLElement>('button[aria-label*="Send" i]') ??
-      document.querySelector<HTMLElement>('button[type="submit"]') ??
+      queryInScope(c, 'button[aria-label*="Submit" i]') ??
+      queryInScope(c, 'button[aria-label*="Send" i]') ??
+      queryInScope(c, 'button[type="submit"]') ??
       null
     );
   },
@@ -36,8 +41,8 @@ export const copilotAdapter: ChatAdapter = {
       setter?.call(composer, text);
       composer.dispatchEvent(new Event('input', { bubbles: true }));
     } else {
-      composer.innerText = text;
-      composer.dispatchEvent(new Event('input', { bubbles: true }));
+      // contenteditable: route through the editor so it commits. See dom.ts.
+      replaceContentEditable(composer, text);
     }
   },
 

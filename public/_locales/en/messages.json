@@ -1,0 +1,419 @@
+{
+  "extName": {
+    "message": "PII Airlock"
+  },
+  "extDesc": {
+    "message": "Replaces personal data in your AI chat messages before they are sent."
+  },
+  "appName": {
+    "message": "PII Airlock"
+  },
+  "chipReplace": {
+    "message": "$p1$ will be replaced",
+    "placeholders": {
+      "p1": {
+        "content": "$1"
+      }
+    }
+  },
+  "chipReview": {
+    "message": "$p1$ to review",
+    "placeholders": {
+      "p1": {
+        "content": "$1"
+      }
+    }
+  },
+  "chipNoticed": {
+    "message": "Noticed"
+  },
+  "chipPaused": {
+    "message": "Paused"
+  },
+  "panelLive": {
+    "message": "Replaced when you send"
+  },
+  "panelReview": {
+    "message": "Review before sending"
+  },
+  "panelAfter": {
+    "message": "Replaced in your last message"
+  },
+  "subLive": {
+    "message": "Untick anything that should go through as typed."
+  },
+  "subReview": {
+    "message": "Checked items are replaced with placeholders."
+  },
+  "subAfter": {
+    "message": "The assistant only saw the placeholders."
+  },
+  "groupNoticed": {
+    "message": "Noticed, not changed"
+  },
+  "btnCancel": {
+    "message": "Cancel"
+  },
+  "btnReplaceSend": {
+    "message": "Replace and send"
+  },
+  "btnReplaceNow": {
+    "message": "Replace now"
+  },
+  "rowAllow": {
+    "message": "Never replace"
+  },
+  "rowAlways": {
+    "message": "Always replace"
+  },
+  "rowDontReplace": {
+    "message": "Don’t replace again"
+  },
+  "toastOne": {
+    "message": "1 item replaced"
+  },
+  "toastMany": {
+    "message": "$p1$ items replaced",
+    "placeholders": {
+      "p1": {
+        "content": "$1"
+      }
+    }
+  },
+  "toastDetails": {
+    "message": "Details"
+  },
+  "namesSkipped": {
+    "message": "Name model still loading; only the built-in name list was used."
+  },
+  "errTitle": {
+    "message": "Couldn’t check this message"
+  },
+  "errBody": {
+    "message": "The check failed, so nothing is known about this text. It was not sent."
+  },
+  "failTitle": {
+    "message": "Couldn’t replace the sensitive data"
+  },
+  "failBody": {
+    "message": "The editor didn’t accept the change, so the message was not sent. Edit it by hand to remove:"
+  },
+  "btnEdit": {
+    "message": "Edit message"
+  },
+  "btnSendUnscanned": {
+    "message": "Send unchecked"
+  },
+  "popActive": {
+    "message": "Protecting this page"
+  },
+  "popNoComposer": {
+    "message": "No chat box found. Not protected here."
+  },
+  "popUnsupported": {
+    "message": "Not active on this site"
+  },
+  "popOff": {
+    "message": "Protection is off"
+  },
+  "popSiteOff": {
+    "message": "Off for this site"
+  },
+  "popPaused": {
+    "message": "Paused until $p1$",
+    "placeholders": {
+      "p1": {
+        "content": "$1"
+      }
+    }
+  },
+  "popSiteToggle": {
+    "message": "Protect $p1$",
+    "placeholders": {
+      "p1": {
+        "content": "$1"
+      }
+    }
+  },
+  "popMode": {
+    "message": "Mode"
+  },
+  "modeAuto": {
+    "message": "Auto"
+  },
+  "modeAutoHint": {
+    "message": "Replaces sensitive data as you send"
+  },
+  "modeReview": {
+    "message": "Review"
+  },
+  "modeReviewHint": {
+    "message": "Shows what changes before each send"
+  },
+  "modeOff": {
+    "message": "Off"
+  },
+  "modeOffHint": {
+    "message": "Checks nothing"
+  },
+  "popPause": {
+    "message": "Pause for 1 hour"
+  },
+  "popResume": {
+    "message": "Resume now"
+  },
+  "popScrubbed": {
+    "message": "$p1$ items replaced so far",
+    "placeholders": {
+      "p1": {
+        "content": "$1"
+      }
+    }
+  },
+  "popClear": {
+    "message": "Clear session data"
+  },
+  "popClearHint": {
+    "message": "Forgets placeholders, your lists and the counter."
+  },
+  "popCleared": {
+    "message": "Cleared"
+  },
+  "popNamesOn": {
+    "message": "Better name detection enabled"
+  },
+  "popNamesOnSub": {
+    "message": "Runs on your device, nothing is sent out"
+  },
+  "popNamesOff": {
+    "message": "Name detection: basic"
+  },
+  "popNamesOffSub": {
+    "message": "Unusual names can be missed"
+  },
+  "popNamesCta": {
+    "message": "Improve"
+  },
+  "popSettings": {
+    "message": "Settings"
+  },
+  "optTitle": {
+    "message": "Settings"
+  },
+  "optMode": {
+    "message": "Protection"
+  },
+  "optEntities": {
+    "message": "What gets replaced"
+  },
+  "optEntitiesDesc": {
+    "message": "Override the default for a kind of data."
+  },
+  "colType": {
+    "message": "Type"
+  },
+  "colAction": {
+    "message": "Action"
+  },
+  "actDefault": {
+    "message": "Default"
+  },
+  "actReplace": {
+    "message": "Replace"
+  },
+  "actAsk": {
+    "message": "Ask first"
+  },
+  "actNotice": {
+    "message": "Notice only"
+  },
+  "actAllow": {
+    "message": "Leave as is"
+  },
+  "optLists": {
+    "message": "Your lists"
+  },
+  "optListsDesc": {
+    "message": "Values you decide about yourself. Stored on this device only, never synced."
+  },
+  "optAllowed": {
+    "message": "Never replace"
+  },
+  "optAlways": {
+    "message": "Always replace"
+  },
+  "optAllowedDesc": {
+    "message": "Left as typed, even when detected. Example: your company name."
+  },
+  "optAlwaysDesc": {
+    "message": "Replaced every time, even when not detected. Example: a project codename."
+  },
+  "optAllowedPh": {
+    "message": "e.g. Acme Corp"
+  },
+  "optAlwaysPh": {
+    "message": "e.g. Project Falcon"
+  },
+  "optAdd": {
+    "message": "Add"
+  },
+  "optAsKind": {
+    "message": "Replace it as"
+  },
+  "optInvalid": {
+    "message": "Needs at least 2 characters, including a letter or a digit."
+  },
+  "optConfirm": {
+    "message": "Confirm after sending"
+  },
+  "optConfirmHint": {
+    "message": "Show a short note when a message was sent with replacements."
+  },
+  "optResetTitle": {
+    "message": "Reset settings?"
+  },
+  "optResetBody": {
+    "message": "Protection mode, per-kind choices and “Confirm after sending” go back to their defaults. Your lists and the names model are kept."
+  },
+  "badgeNoComposer": {
+    "message": "PII Airlock: no chat box found on this page. NOT protected here."
+  },
+  "optEmpty": {
+    "message": "Nothing here yet."
+  },
+  "optRemove": {
+    "message": "Remove"
+  },
+  "optReset": {
+    "message": "Reset settings"
+  },
+  "optSaved": {
+    "message": "Saved"
+  },
+  "optFooter": {
+    "message": "Open source. Your text never leaves your browser."
+  },
+  "nerTitle": {
+    "message": "Better name detection"
+  },
+  "nerDesc": {
+    "message": "Finds names the built-in list can miss, best in English, French, German, Spanish, Italian, Portuguese, Dutch and Chinese. It runs on this device. Your messages are never sent anywhere; only the model file is downloaded, once, from huggingface.co (pinned version, checksum verified)."
+  },
+  "langTitle": {
+    "message": "Languages"
+  },
+  "langDesc": {
+    "message": "What is covered, by kind of data."
+  },
+  "langStructured": {
+    "message": "Emails, phones, cards, IBANs, IDs, secrets"
+  },
+  "langStructuredVal": {
+    "message": "Any language"
+  },
+  "langNames": {
+    "message": "Names, built-in"
+  },
+  "langNamesVal": {
+    "message": "Common first names in EN, FR, DE, IT, ES, PT, NL. Not RU, JA, ZH."
+  },
+  "langModel": {
+    "message": "Names, with the model above"
+  },
+  "langModelVal": {
+    "message": "EN, FR, DE, ES, IT, PT, NL, ZH (also AR, LV). Catches unusual surnames."
+  },
+  "nerDownload": {
+    "message": "Download model ($p1$)",
+    "placeholders": {
+      "p1": {
+        "content": "$1"
+      }
+    }
+  },
+  "nerCancel": {
+    "message": "Cancel"
+  },
+  "nerInstalled": {
+    "message": "Installed ($p1$ on disk)",
+    "placeholders": {
+      "p1": {
+        "content": "$1"
+      }
+    }
+  },
+  "nerRemove": {
+    "message": "Remove"
+  },
+  "nerFailed": {
+    "message": "Download failed: $p1$",
+    "placeholders": {
+      "p1": {
+        "content": "$1"
+      }
+    }
+  },
+  "nerRetry": {
+    "message": "Retry"
+  },
+  "ent_EMAIL_ADDRESS": {
+    "message": "Email address"
+  },
+  "ent_PHONE_NUMBER": {
+    "message": "Phone number"
+  },
+  "ent_CREDIT_CARD": {
+    "message": "Card number"
+  },
+  "ent_IBAN_CODE": {
+    "message": "IBAN"
+  },
+  "ent_SSN": {
+    "message": "Social security number"
+  },
+  "ent_IP_ADDRESS": {
+    "message": "IP address"
+  },
+  "ent_IP_ADDRESS_PRIVATE": {
+    "message": "Private IP address"
+  },
+  "ent_CRYPTO": {
+    "message": "Crypto address"
+  },
+  "ent_SECRET_KEY": {
+    "message": "Secret or key"
+  },
+  "ent_PERSON": {
+    "message": "Name"
+  },
+  "ent_LOCATION": {
+    "message": "Place"
+  },
+  "ent_ORG": {
+    "message": "Organisation"
+  },
+  "ent_DATE_OF_BIRTH": {
+    "message": "Date of birth"
+  },
+  "ent_FR_NIR": {
+    "message": "French social security no."
+  },
+  "ent_CH_AHV": {
+    "message": "Swiss AVS number"
+  },
+  "ent_FR_SIRET": {
+    "message": "SIRET number"
+  },
+  "ent_FR_SIREN": {
+    "message": "SIREN number"
+  },
+  "ent_DE_TAX_ID": {
+    "message": "German tax ID"
+  },
+  "ent_DE_TAX_NUMBER": {
+    "message": "German tax number"
+  },
+  "ent_IT_VAT_CODE": {
+    "message": "Italian VAT number"
+  }
+}

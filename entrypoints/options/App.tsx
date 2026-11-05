@@ -1,319 +1,236 @@
-import { useState, useEffect } from "react";
-import icon from "~/assets/pii-airlock-icon.png";
+import { useEffect, useRef, useState, type FormEvent } from "react";
+import { t, entityLabel } from "~/lib/i18n";
+import { defaultDecisionFor, type Mode } from "~/lib/policy";
+import type { Decision } from "~/lib/detection/types";
+import { MAX_LIST_ENTRIES, MAX_VALUE_LENGTH, cleanListValue, type Lists } from "~/lib/lists";
+import NerSection from "./NerSection";
 import "./App.css";
 
-type Mode = "strict" | "permissive";
-type Decision = "allow" | "notify" | "warn" | "auto_scrub" | "block";
-
-interface Settings {
-  mode: Mode;
-  overrides: Record<string, Decision>;
-  scrubCount: number;
-}
-
-interface EntityConfig {
-  type: string;
-  label: string;
-  tier: "high" | "medium" | "low";
-  description: string;
-}
-
-const ENTITIES: EntityConfig[] = [
-  {
-    type: "EMAIL_ADDRESS",
-    label: "Email address",
-    tier: "high",
-    description: "e.g. alice@example.com",
-  },
-  {
-    type: "PHONE_NUMBER",
-    label: "Phone number",
-    tier: "high",
-    description: "e.g. +1 555 867 5309",
-  },
-  {
-    type: "CREDIT_CARD",
-    label: "Credit card",
-    tier: "high",
-    description: "Validated with Luhn check",
-  },
-  {
-    type: "IBAN_CODE",
-    label: "IBAN",
-    tier: "high",
-    description: "International bank account number",
-  },
-  {
-    type: "SSN",
-    label: "Social security number",
-    tier: "high",
-    description: "US SSN format",
-  },
-  {
-    type: "IP_ADDRESS",
-    label: "IP address",
-    tier: "high",
-    description: "IPv4 and IPv6",
-  },
-  {
-    type: "CRYPTO",
-    label: "Crypto address",
-    tier: "high",
-    description: "Bitcoin, Ethereum addresses",
-  },
-  {
-    type: "SECRET_KEY",
-    label: "Secret key / token",
-    tier: "high",
-    description: "Bearer, sk-, ghp_, passwords",
-  },
-  {
-    type: "PERSON",
-    label: "Person name",
-    tier: "medium",
-    description: "Detected by NLP (English)",
-  },
-  {
-    type: "LOCATION",
-    label: "Location",
-    tier: "medium",
-    description: "City, country, address (English)",
-  },
-  {
-    type: "ORG",
-    label: "Organisation",
-    tier: "medium",
-    description: "Company, institution (English)",
-  },
-  {
-    type: "DATE_OF_BIRTH",
-    label: "Date of birth",
-    tier: "low",
-    description: "Only when preceded by DOB label",
-  },
+const ENTITY_TYPES = [
+  "EMAIL_ADDRESS", "PHONE_NUMBER", "CREDIT_CARD", "IBAN_CODE", "SSN", "IP_ADDRESS", "IP_ADDRESS_PRIVATE",
+  "CRYPTO", "SECRET_KEY", "PERSON", "LOCATION", "ORG", "DATE_OF_BIRTH", "FR_NIR", "CH_AHV", "FR_SIRET",
+  "FR_SIREN", "DE_TAX_ID", "DE_TAX_NUMBER", "IT_VAT_CODE",
 ];
 
-const DECISION_LABELS: Record<Decision, string> = {
-  allow: "Allow (skip)",
-  notify: "Notify (passive pill)",
-  warn: "Warn (banner, can override)",
-  auto_scrub: "Auto-scrub",
-  block: "Block (must act)",
-};
+/** Kinds offered for "Always replace" (the token the value gets). */
+const DENY_TYPES = ["PERSON", "ORG", "LOCATION", "SECRET_KEY", "EMAIL_ADDRESS", "PHONE_NUMBER", "IBAN_CODE", "CREDIT_CARD"];
 
-const TIER_COLORS: Record<string, string> = {
-  high: "#e53e3e",
-  medium: "#d97706",
-  low: "#2f855a",
-};
+const MODES: Mode[] = ["auto", "review", "off"];
+const cap = (m: string) => m[0]!.toUpperCase() + m.slice(1);
 
-const DEFAULT_SETTINGS: Settings = {
-  mode: "strict",
-  overrides: {},
-  scrubCount: 0,
-};
-
-// Ordered from most to least restrictive (for the <select>)
-const DECISIONS: Decision[] = [
-  "block",
-  "auto_scrub",
-  "warn",
-  "notify",
-  "allow",
+const ACTIONS: Array<{ value: Decision; key: string }> = [
+  { value: "auto_scrub", key: "actReplace" },
+  { value: "warn", key: "actAsk" },
+  { value: "notify", key: "actNotice" },
+  { value: "allow", key: "actAllow" },
 ];
+const actionKey = (d: Decision) => ACTIONS.find((a) => a.value === (d === "block" ? "auto_scrub" : d))?.key ?? "actReplace";
 
 function App() {
-  const [settings, setSettings] = useState<Settings>(DEFAULT_SETTINGS);
+  const [mode, setMode] = useState<Mode>("auto");
+  const [overrides, setOverrides] = useState<Record<string, Decision>>({});
+  const [lists, setLists] = useState<Lists>({ allow: [], deny: [] });
+  const [confirm, setConfirm] = useState(true);
   const [saved, setSaved] = useState(false);
+  const resetDialog = useRef<HTMLDialogElement>(null);
 
   useEffect(() => {
-    browser.storage.sync
-      .get(DEFAULT_SETTINGS as unknown as Record<string, unknown>)
-      .then((s) => setSettings(s as unknown as Settings));
+    browser.storage.sync.get({ mode: "auto", overrides: {}, confirmAfterSend: true }).then((s) => {
+      setConfirm(s.confirmAfterSend !== false);
+      const m = s.mode as string;
+      setMode(m === "review" || m === "off" ? m : "auto");
+      setOverrides(s.overrides as Record<string, Decision>);
+    });
+    browser.storage.local.get({ lists: { allow: [], deny: [] } }).then((s) => setLists(s.lists as Lists));
+    const onChange = (c: Record<string, { newValue?: unknown }>, area: string) => {
+      if (area === "local" && c.lists) setLists((c.lists.newValue as Lists) ?? { allow: [], deny: [] });
+    };
+    browser.storage.onChanged.addListener(onChange);
+    return () => browser.storage.onChanged.removeListener(onChange);
   }, []);
 
-  function save(next: Settings) {
-    setSettings(next);
-    browser.storage.sync
-      .set(next as unknown as Record<string, unknown>)
-      .then(() => {
-        setSaved(true);
-        setTimeout(() => setSaved(false), 2000);
-      });
-  }
+  const flash = () => {
+    setSaved(true);
+    setTimeout(() => setSaved(false), 1800);
+  };
+  const saveSync = (patch: { mode?: Mode; overrides?: Record<string, Decision>; confirmAfterSend?: boolean }) =>
+    browser.storage.sync.set(patch).then(flash);
 
-  function setMode(mode: Mode) {
-    save({ ...settings, mode });
-  }
-
-  function setOverride(entityType: string, decision: Decision | "") {
-    const overrides = { ...settings.overrides };
-    if (decision === "") {
-      delete overrides[entityType];
-    } else {
-      overrides[entityType] = decision;
-    }
-    save({ ...settings, overrides });
-  }
-
-  function resetAll() {
-    save({ ...DEFAULT_SETTINGS, scrubCount: settings.scrubCount });
-  }
+  const chooseMode = (m: Mode) => { setMode(m); void saveSync({ mode: m }); };
+  const setOverride = (type: string, v: Decision | "") => {
+    const next = { ...overrides };
+    if (v === "") delete next[type]; else next[type] = v;
+    setOverrides(next);
+    void saveSync({ overrides: next });
+  };
+  const saveLists = (next: Lists) => { setLists(next); void browser.storage.local.set({ lists: next }).then(flash); };
 
   return (
     <div className="options">
       <header>
-        <div className="header-title">
-          <img src={icon} alt="" className="logo" />
-          <h1>PII Airlock — Options</h1>
-        </div>
-        {saved && <span className="saved-badge">✓ Saved</span>}
+        <span className="brand"><Shield /> {t("appName")} <span className="sub">{t("optTitle")}</span></span>
+        <span className="saved" role="status">{saved ? t("optSaved") : ""}</span>
       </header>
 
-      {/* Mode */}
-      <section className="section">
-        <h2>Detection mode</h2>
-        <div className="mode-options">
-          {(["strict", "permissive"] as Mode[]).map((m) => (
-            <label
-              key={m}
-              className={`mode-card ${settings.mode === m ? "active" : ""}`}
-            >
-              <input
-                type="radio"
-                name="mode"
-                value={m}
-                checked={settings.mode === m}
-                onChange={() => setMode(m)}
-              />
-              <div className="mode-card-body">
-                <strong>
-                  {m === "strict" ? "🛡 Strict (recommended)" : "🔔 Permissive"}
-                </strong>
-                <span>
-                  {m === "strict"
-                    ? "Blocks high-risk PII. Auto-scrubs names and locations."
-                    : "Warns on high-risk PII. Allows names and locations through."}
-                </span>
-              </div>
-            </label>
-          ))}
+      <section>
+        <h2>{t("optMode")}</h2>
+        <div className="group pad">
+          <div className="seg" role="radiogroup" aria-label={t("optMode")}>
+            {MODES.map((m) => (
+              <label key={m} className={mode === m ? "on" : ""}>
+                <input type="radio" name="mode" checked={mode === m} onChange={() => chooseMode(m)} />
+                {t(`mode${cap(m)}`)}
+              </label>
+            ))}
+          </div>
+          <p className="hint">{t(`mode${cap(mode)}Hint`)}</p>
+          <label className="check">
+            <input
+              type="checkbox" checked={confirm}
+              onChange={(e) => { setConfirm(e.target.checked); void saveSync({ confirmAfterSend: e.target.checked }); }}
+            />
+            <span>{t("optConfirm")}<small>{t("optConfirmHint")}</small></span>
+          </label>
         </div>
       </section>
 
-      {/* Entity overrides */}
-      <section className="section">
-        <h2>Per-entity policy</h2>
-        <p className="section-desc">
-          Override the default action for specific entity types. Leave blank to
-          use the mode default.
-        </p>
-        <table className="entity-table">
-          <thead>
-            <tr>
-              <th>Entity</th>
-              <th>Tier</th>
-              <th>Default action</th>
-              <th>Override</th>
-            </tr>
-          </thead>
-          <tbody>
-            {ENTITIES.map((e) => {
-              const defaultDecision =
-                e.tier === "high"
-                  ? settings.mode === "strict"
-                    ? "block"
-                    : "auto_scrub"
-                  : e.tier === "medium"
-                    ? settings.mode === "strict"
-                      ? "auto_scrub"
-                      : "warn"
-                    : settings.mode === "strict"
-                      ? "warn"
-                      : "notify";
+      <NerSection />
 
-              const override = settings.overrides[e.type];
-
-              return (
-                <tr key={e.type} className={override ? "overridden" : ""}>
-                  <td>
-                    <span className="entity-label">{e.label}</span>
-                    <span className="entity-desc">{e.description}</span>
-                  </td>
-                  <td>
-                    <span
-                      className="tier-badge"
-                      style={{ color: TIER_COLORS[e.tier] }}
-                    >
-                      {e.tier}
-                    </span>
-                  </td>
-                  <td>
-                    <span className="default-decision">
-                      {DECISION_LABELS[defaultDecision]}
-                    </span>
-                  </td>
-                  <td>
-                    <select
-                      value={override ?? ""}
-                      onChange={(ev) =>
-                        setOverride(e.type, ev.target.value as Decision | "")
-                      }
-                    >
-                      <option value="">(use default)</option>
-                      {DECISIONS.map((d) => (
-                        <option key={d} value={d}>
-                          {DECISION_LABELS[d]}
-                        </option>
-                      ))}
-                    </select>
-                  </td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
+      <section id="languages">
+        <h2>{t("langTitle")}</h2>
+        <p className="desc">{t("langDesc")}</p>
+        <ul className="group">
+          {(["Structured", "Names", "Model"] as const).map((k) => (
+            <li key={k} className="row lang">
+              <span>{t(`lang${k}`)}</span>
+              <span className="muted">{t(`lang${k}Val`)}</span>
+            </li>
+          ))}
+        </ul>
       </section>
 
-      {/* Stats + Reset — same row */}
-      <div className="stats-reset-row">
-        <section className="section stats-section">
-          <h2>Statistics</h2>
-          <div className="stat-row">
-            <span>Total items scrubbed (all sessions)</span>
-            <strong>{settings.scrubCount}</strong>
-          </div>
-        </section>
+      <section>
+        <h2>{t("optEntities")}</h2>
+        <p className="desc">{t("optEntitiesDesc")}</p>
+        <ul className="group">
+          {ENTITY_TYPES.map((type) => {
+            const def = defaultDecisionFor(type, mode);
+            return (
+              <li key={type} className="row">
+                <label htmlFor={`e-${type}`}>{entityLabel(type)}</label>
+                <select
+                  id={`e-${type}`}
+                  value={overrides[type] ?? ""}
+                  onChange={(e) => setOverride(type, e.target.value as Decision | "")}
+                >
+                  <option value="">{t("actDefault")} · {t(actionKey(def))}</option>
+                  {ACTIONS.map((a) => <option key={a.value} value={a.value}>{t(a.key)}</option>)}
+                </select>
+              </li>
+            );
+          })}
+        </ul>
+      </section>
 
-        <section className="section">
-          <h2>Reset</h2>
-          <button className="reset-btn" onClick={resetAll}>
-            Reset all settings to defaults
-          </button>
-        </section>
-      </div>
+      <section>
+        <h2>{t("optLists")}</h2>
+        <p className="desc">{t("optListsDesc")}</p>
+        <ListBox
+          title={t("optAllowed")}
+          desc={t("optAllowedDesc")}
+          placeholder={t("optAllowedPh")}
+          items={lists.allow}
+          onAdd={(value) => {
+            if (lists.allow.length >= MAX_LIST_ENTRIES || lists.allow.some((v) => v.toLowerCase() === value.toLowerCase())) return;
+            saveLists({ allow: [...lists.allow, value], deny: lists.deny.filter((d) => d.value.toLowerCase() !== value.toLowerCase()) });
+          }}
+          onRemove={(i) => saveLists({ ...lists, allow: lists.allow.filter((_, j) => j !== i) })}
+        />
+        <ListBox
+          title={t("optAlways")}
+          desc={t("optAlwaysDesc")}
+          placeholder={t("optAlwaysPh")}
+          types={DENY_TYPES}
+          items={lists.deny.map((d) => d.value)}
+          sub={lists.deny.map((d) => entityLabel(d.type))}
+          onAdd={(value, type) => {
+            if (lists.deny.length >= MAX_LIST_ENTRIES || lists.deny.some((d) => d.value.toLowerCase() === value.toLowerCase())) return;
+            saveLists({ allow: lists.allow.filter((v) => v.toLowerCase() !== value.toLowerCase()), deny: [...lists.deny, { value, type: type ?? "PERSON" }] });
+          }}
+          onRemove={(i) => saveLists({ ...lists, deny: lists.deny.filter((_, j) => j !== i) })}
+        />
+      </section>
 
       <footer>
-        <span>PII Airlock — open source, no data leaves your browser.</span>
-        <a
-          href="https://github.com/matinfo/pii-airlock-extension"
-          target="_blank"
-          rel="noopener"
-        >
-          <svg height="20" width="20" viewBox="0 0 16 16" fill="currentColor" aria-label="GitHub">
-            <path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38
-              0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13
-              -.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66
-              .07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15
-              -.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27
-              .68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12
-              .51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48
-              0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/>
-          </svg>
-        </a>
+        <span>{t("optFooter")}</span>
+        <button className="link" onClick={() => resetDialog.current?.showModal()}>{t("optReset")}</button>
       </footer>
+
+      <dialog ref={resetDialog} className="confirm" aria-labelledby="reset-title">
+        <h2 id="reset-title">{t("optResetTitle")}</h2>
+        <p>{t("optResetBody")}</p>
+        <div className="actions">
+          <button className="btn" autoFocus onClick={() => resetDialog.current?.close()}>{t("btnCancel")}</button>
+          <button className="btn primary" onClick={() => {
+            setMode("auto"); setOverrides({}); setConfirm(true);
+            void saveSync({ mode: "auto", overrides: {}, confirmAfterSend: true });
+            resetDialog.current?.close();
+          }}>{t("optReset")}</button>
+        </div>
+      </dialog>
     </div>
   );
+}
+
+function ListBox({ title, desc, placeholder, types, items, sub, onAdd, onRemove }: {
+  title: string; desc: string; placeholder: string; types?: string[];
+  items: string[]; sub?: string[];
+  onAdd: (value: string, type?: string) => void; onRemove: (i: number) => void;
+}) {
+  const [value, setValue] = useState("");
+  const [type, setType] = useState(types?.[0] ?? "");
+  const submit = (e: FormEvent) => {
+    e.preventDefault();
+    const v = cleanListValue(value);
+    if (!v) return;
+    onAdd(v, types ? type : undefined);
+    setValue("");
+  };
+  return (
+    <div className="listbox">
+      <h3>{title}</h3>
+      <p className="desc">{desc}</p>
+      <form className="add" onSubmit={submit}>
+        <input
+          type="text" value={value} placeholder={placeholder} maxLength={MAX_VALUE_LENGTH}
+          aria-label={title} onChange={(e) => setValue(e.target.value)}
+        />
+        {types && (
+          <select value={type} aria-label={t("optAsKind")} onChange={(e) => setType(e.target.value)}>
+            {types.map((k) => <option key={k} value={k}>{entityLabel(k)}</option>)}
+          </select>
+        )}
+        <button className="btn primary" type="submit" disabled={!cleanListValue(value)}>{t("optAdd")}</button>
+      </form>
+      {value.trim() !== "" && !cleanListValue(value) && <p className="hint warn-text" role="status">{t("optInvalid")}</p>}
+      {items.length === 0 ? (
+        <p className="empty group pad">{t("optEmpty")}</p>
+      ) : (
+        <ul className="group">
+          {items.map((v, i) => (
+            <li key={`${v}-${i}`} className="row">
+              <span className="v">{v}{sub?.[i] && <small>{sub[i]}</small>}</span>
+              <button className="link" onClick={() => onRemove(i)} aria-label={`${t("optRemove")}: ${v}`}>{t("optRemove")}</button>
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  );
+}
+
+function Shield() {
+  return <img src={browser.runtime.getURL("/icon/48.png" as never)} width={20} height={20} alt="" aria-hidden="true" />;
 }
 
 export default App;

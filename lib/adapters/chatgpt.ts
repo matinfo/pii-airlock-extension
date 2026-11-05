@@ -1,6 +1,7 @@
 /** Adapter for chatgpt.com and chat.openai.com. */
 
 import type { ChatAdapter } from './types';
+import { replaceContentEditable } from './dom';
 
 export const chatgptAdapter: ChatAdapter = {
   name: 'chatgpt',
@@ -10,6 +11,9 @@ export const chatgptAdapter: ChatAdapter = {
       document.querySelector<HTMLElement>('#prompt-textarea') ??
       document.querySelector<HTMLElement>('[data-testid="prompt-textarea"]') ??
       document.querySelector<HTMLElement>('div[contenteditable="true"].ProseMirror') ??
+      // Logged-out chatgpt.com: a plain textarea, no ProseMirror.
+      document.querySelector<HTMLElement>('textarea#mobile-composer-prompt') ??
+      document.querySelector<HTMLElement>('textarea[name="prompt"]') ??
       null
     );
   },
@@ -18,18 +22,20 @@ export const chatgptAdapter: ChatAdapter = {
     return (
       document.querySelector<HTMLElement>('[data-testid="send-button"]') ??
       document.querySelector<HTMLElement>('button[aria-label="Send prompt"]') ??
+      document.querySelector<HTMLElement>('button[aria-label*="Send" i]') ??
       null
     );
   },
 
   getText(composer: HTMLElement): string {
+    if (composer instanceof HTMLTextAreaElement) return composer.value;
     return composer.innerText ?? '';
   },
 
   setText(composer: HTMLElement, text: string): void {
-    // ChatGPT uses ProseMirror — set innerHTML via paragraph structure
-    composer.innerHTML = `<p>${text.replace(/\n/g, '</p><p>')}</p>`;
-    composer.dispatchEvent(new Event('input', { bubbles: true }));
+    // ChatGPT uses ProseMirror — innerHTML mutation does not commit to its
+    // internal state and leaks the original text on send. See dom.ts.
+    replaceContentEditable(composer, text);
   },
 
   triggerSend(): void {

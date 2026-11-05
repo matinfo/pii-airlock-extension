@@ -101,12 +101,27 @@ describe('SSN', () => {
 // ── IP address ────────────────────────────────────────────────────────────────
 
 describe('IP_ADDRESS', () => {
-  it('detects IPv4', () => {
-    expect(hasType('server at 192.168.1.1 is down', 'IP_ADDRESS')).toBe(true);
+  it('detects public IPv4', () => {
+    expect(hasType('server at 8.8.4.4 is down', 'IP_ADDRESS')).toBe(true);
   });
 
-  it('detects another valid IPv4', () => {
-    expect(hasType('10.0.0.1', 'IP_ADDRESS')).toBe(true);
+  it('classifies private ranges as the lower-tier IP_ADDRESS_PRIVATE', () => {
+    expect(hasType('10.0.0.1', 'IP_ADDRESS_PRIVATE')).toBe(true);
+    expect(hasType('10.0.0.1', 'IP_ADDRESS')).toBe(false);
+    expect(hasType('host 192.168.1.1', 'IP_ADDRESS_PRIVATE')).toBe(true);
+  });
+
+  it('does not flag version numbers', () => {
+    expect(hasType('version 1.2.3.4', 'IP_ADDRESS')).toBe(false);
+    expect(hasType('needs v1.2.3.4', 'IP_ADDRESS')).toBe(false);
+  });
+
+  it('does not flag clock times as IPv6', () => {
+    expect(hasType('at 12:30:45 sharp', 'IP_ADDRESS')).toBe(false);
+  });
+
+  it('detects compressed IPv6', () => {
+    expect(hasType('addr 2001:db8::ff00:42:8329', 'IP_ADDRESS')).toBe(true);
   });
 
   it('does not flag 999.999.999.999', () => {

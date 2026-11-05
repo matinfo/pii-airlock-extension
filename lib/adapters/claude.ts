@@ -1,6 +1,7 @@
 /** Adapter for claude.ai. */
 
 import type { ChatAdapter } from './types';
+import { replaceContentEditable } from './dom';
 
 export const claudeAdapter: ChatAdapter = {
   name: 'claude',
@@ -26,15 +27,9 @@ export const claudeAdapter: ChatAdapter = {
   },
 
   setText(composer: HTMLElement, text: string): void {
-    composer.innerHTML = `<p>${text.replace(/\n/g, '</p><p>')}</p>`;
-    composer.dispatchEvent(new Event('input', { bubbles: true }));
-    // Move cursor to end
-    const range = document.createRange();
-    const sel = window.getSelection();
-    range.selectNodeContents(composer);
-    range.collapse(false);
-    sel?.removeAllRanges();
-    sel?.addRange(range);
+    // claude.ai uses ProseMirror — innerHTML mutation does not commit to its
+    // internal state and leaks the original text on send. See dom.ts.
+    replaceContentEditable(composer, text);
   },
 
   triggerSend(): void {

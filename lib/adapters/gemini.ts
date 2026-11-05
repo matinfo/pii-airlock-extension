@@ -1,6 +1,7 @@
 /** Adapter for gemini.google.com. */
 
 import type { ChatAdapter } from './types';
+import { replaceContentEditable } from './dom';
 
 export const geminiAdapter: ChatAdapter = {
   name: 'gemini',
@@ -15,7 +16,10 @@ export const geminiAdapter: ChatAdapter = {
   },
 
   findSendButton(): HTMLElement | null {
+    // aria-label is localised ("Envoyer un message", "Nachricht senden"…), so the
+    // arrow icon is the locale-independent anchor. Mic/stop use other icons.
     return (
+      document.querySelector<HTMLElement>('button:has([data-mat-icon-name="arrow_upward"])') ??
       document.querySelector<HTMLElement>('button[aria-label="Send message"]') ??
       document.querySelector<HTMLElement>('button.send-button') ??
       document.querySelector<HTMLElement>('button[data-mat-icon-name="send"]') ??
@@ -28,10 +32,9 @@ export const geminiAdapter: ChatAdapter = {
   },
 
   setText(composer: HTMLElement, text: string): void {
-    // Quill editor: set innerText and dispatch events
-    composer.innerText = text;
-    composer.dispatchEvent(new Event('input', { bubbles: true }));
-    composer.dispatchEvent(new InputEvent('input', { bubbles: true, inputType: 'insertText', data: text }));
+    // Gemini uses a Quill editor with its own internal model — innerText
+    // mutation does not commit and leaks the original on send. See dom.ts.
+    replaceContentEditable(composer, text);
   },
 
   triggerSend(): void {

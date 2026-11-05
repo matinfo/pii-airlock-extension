@@ -42,9 +42,8 @@ describe('French local phone (lang=fr)', () => {
   it('detects landline: 01 23 45 67 89', () =>
     expect(hasPhone('fixe: 01 23 45 67 89', 'fr')).toBe(true));
 
-  it('does NOT detect French local format when lang=en', () =>
-    // Universal pattern won't match bare French local format
-    expect(hasPhone('06 12 34 56 78', 'en')).toBe(false));
+  it('detects French local format in an English sentence (no language routing)', () =>
+    expect(hasPhone('call me on 06 12 34 56 78', 'en')).toBe(true));
 });
 
 // ── German local format ───────────────────────────────────────────────────────
@@ -54,7 +53,7 @@ describe('German local phone (lang=de)', () => {
     expect(hasPhone('Handy: 0176 12345678', 'de')).toBe(true));
 
   it('detects mobile: 015712345678', () =>
-    expect(hasPhone('015712345678', 'de')).toBe(true));
+    expect(hasPhone('Handy: 015712345678', 'de')).toBe(true));
 
   it('detects Berlin landline: 030 12345678', () =>
     expect(hasPhone('Festnetz: 030 12345678', 'de')).toBe(true));

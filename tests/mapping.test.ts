@@ -56,6 +56,16 @@ describe('BrowserMapping', () => {
       expect(out).toBe('keep <UNKNOWN_TOKEN_99> as-is');
     });
 
+    it('restores square-bracket echoes (ChatGPT rewrites <X_1> as [X_1])', () => {
+      m.tokenFor('PERSON', 'Jean Dupont');
+      expect(m.restore('Hi [PERSON_1], and <PERSON_1>')).toBe('Hi Jean Dupont, and Jean Dupont');
+    });
+
+    it('leaves unknown square-bracket text alone', () => {
+      m.tokenFor('PERSON', 'Jean Dupont');
+      expect(m.restore('see [PERSON_7] and [NOTE_1]')).toBe('see [PERSON_7] and [NOTE_1]');
+    });
+
     it('restores same token appearing twice', () => {
       m.tokenFor('EMAIL_ADDRESS', 'x@y.com');
       const out = m.restore('<EMAIL_ADDRESS_1> and <EMAIL_ADDRESS_1>');
@@ -121,6 +131,44 @@ describe('BrowserMapping', () => {
       const out = m.restore('<EMAIL_ADDRESS_1>');
       // Token unknown after clear — leaves as-is
       expect(out).toBe('<EMAIL_ADDRESS_1>');
+    });
+  });
+
+  // ── persistence ────────────────────────────────────────────────────────────
+
+  describe('entries / load', () => {
+    it('round-trips and continues numbering after the imported tokens', () => {
+      m.tokenFor('PERSON', 'Jean Dupont');
+      m.tokenFor('PERSON', 'Anna Rossi');
+      const saved = m.entries();
+      const fresh = new BrowserMapping();
+      fresh.load(saved);
+      expect(fresh.restore('<PERSON_2> met <PERSON_1>')).toBe('Anna Rossi met Jean Dupont');
+      expect(fresh.tokenFor('PERSON', 'Jean Dupont')).toBe('<PERSON_1>');
+      expect(fresh.tokenFor('PERSON', 'New Person')).toBe('<PERSON_3>');
+    });
+
+    it('keeps values containing the key separator intact', () => {
+      m.tokenFor('SECRET_KEY', 'a||b');
+      const fresh = new BrowserMapping();
+      fresh.load(m.entries());
+      expect(fresh.restore('<SECRET_KEY_1>')).toBe('a||b');
+    });
+
+    it('local tokens win over imported ones', () => {
+      m.tokenFor('PERSON', 'Local One');
+      m.load([['PERSON', 'Other One', '<PERSON_1>']]);
+      expect(m.restore('<PERSON_1>')).toBe('Local One');
+    });
+
+    it('notifies on mint and clear, not on repeat lookups', () => {
+      let n = 0;
+      m.onChange = () => { n++; };
+      m.tokenFor('EMAIL_ADDRESS', 'a@b.com');
+      m.tokenFor('EMAIL_ADDRESS', 'a@b.com');
+      expect(n).toBe(1);
+      m.clear();
+      expect(n).toBe(2);
     });
   });
 });

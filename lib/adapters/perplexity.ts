@@ -1,12 +1,15 @@
-/** Adapter for perplexity.ai. */
+/** Adapter for perplexity.ai. The composer is a Lexical contenteditable. */
 
 import type { ChatAdapter } from './types';
+import { replaceContentEditable, queryInScope } from './dom';
 
 export const perplexityAdapter: ChatAdapter = {
   name: 'perplexity',
 
   findComposer(): HTMLElement | null {
     return (
+      document.querySelector<HTMLElement>('[data-lexical-editor="true"][contenteditable="true"]') ??
+      document.querySelector<HTMLElement>('[role="textbox"][contenteditable="true"]') ??
       document.querySelector<HTMLElement>('textarea[placeholder*="Ask" i]') ??
       document.querySelector<HTMLElement>('textarea[placeholder*="Search" i]') ??
       document.querySelector<HTMLElement>('textarea') ??
@@ -14,10 +17,12 @@ export const perplexityAdapter: ChatAdapter = {
     );
   },
 
-  findSendButton(): HTMLElement | null {
+  findSendButton(composer?: HTMLElement): HTMLElement | null {
+    const c = composer ?? this.findComposer();
     return (
-      document.querySelector<HTMLElement>('button[aria-label*="Submit" i]') ??
-      document.querySelector<HTMLElement>('button[type="submit"]') ??
+      queryInScope(c, 'button[aria-label*="Submit" i]') ??
+      queryInScope(c, 'button[data-testid*="submit" i]') ??
+      queryInScope(c, 'button[type="submit"]') ??
       null
     );
   },
@@ -35,8 +40,8 @@ export const perplexityAdapter: ChatAdapter = {
       setter?.call(composer, text);
       composer.dispatchEvent(new Event('input', { bubbles: true }));
     } else {
-      composer.innerText = text;
-      composer.dispatchEvent(new Event('input', { bubbles: true }));
+      // contenteditable: route through the editor so it commits. See dom.ts.
+      replaceContentEditable(composer, text);
     }
   },
 

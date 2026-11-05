@@ -1,6 +1,7 @@
 /** Adapter for character.ai (character.ai/chat/). */
 
 import type { ChatAdapter } from './types';
+import { replaceContentEditable, queryInScope } from './dom';
 
 export const characterAdapter: ChatAdapter = {
   name: 'character.ai',
@@ -17,11 +18,12 @@ export const characterAdapter: ChatAdapter = {
     );
   },
 
-  findSendButton(): HTMLElement | null {
+  findSendButton(composer?: HTMLElement): HTMLElement | null {
+    const c = composer ?? this.findComposer();
     return (
-      document.querySelector<HTMLElement>('button[type="submit"][form]') ??
-      document.querySelector<HTMLElement>('button[aria-label*="Send" i]') ??
-      document.querySelector<HTMLElement>('button[class*="send" i]') ??
+      queryInScope(c, 'button[type="submit"][form]') ??
+      queryInScope(c, 'button[aria-label*="Send" i]') ??
+      queryInScope(c, 'button[class*="send" i]') ??
       null
     );
   },
@@ -37,10 +39,11 @@ export const characterAdapter: ChatAdapter = {
         HTMLTextAreaElement.prototype, 'value',
       )?.set;
       nativeSetter?.call(composer, text);
+      composer.dispatchEvent(new Event('input', { bubbles: true }));
     } else {
-      composer.innerText = text;
+      // contenteditable: route through the editor so it commits. See dom.ts.
+      replaceContentEditable(composer, text);
     }
-    composer.dispatchEvent(new Event('input', { bubbles: true }));
   },
 
   triggerSend(composer: HTMLElement): void {

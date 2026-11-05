@@ -9,8 +9,10 @@
 import type { Detection, DetectionResult } from './types';
 import { detectRegex } from './regex';
 import { detectNlp } from './nlp';
+import { detectNerRemote } from './ner-client';
 import { detectLanguage } from './lang';
 import { getDecision, tierOf } from '../policy';
+import { denyHits, dropAllowed } from '../lists';
 
 // ---------------------------------------------------------------------------
 // Overlap deduplication
@@ -46,7 +48,7 @@ function dedupeOverlaps(detections: Detection[]): Detection[] {
  */
 export async function analyze(
   text: string,
-  options: { skipNlp?: boolean } = {},
+  options: { skipNlp?: boolean; skipNer?: boolean } = {},
 ): Promise<DetectionResult> {
   try {
     const lang = detectLanguage(text);
@@ -54,10 +56,20 @@ export async function analyze(
     // Layer 1: regex (sync) — locale-aware phone patterns require lang
     const regexHits = detectRegex(text, lang);
 
-    // Layer 2: NLP (async, English only)
-    const nlpHits = options.skipNlp ? [] : await detectNlp(text, lang);
+    // Layers 2 + 3 run concurrently; both fail-open to [].
+    // Layer 2: compromise (instant, lexicon-based fallback).
+    // Layer 3: transformer NER (heavy, multilingual, catches novel surnames +
+    // non-English given names). Higher NER scores win the overlap dedupe.
+    const [nlpHits, ner] = await Promise.all([
+      options.skipNlp ? Promise.resolve([]) : detectNlp(text, lang),
+      options.skipNer
+        ? Promise.resolve({ detections: [] as Detection[], timedOut: false })
+        : detectNerRemote(text, lang),
+    ]);
 
-    const all = dedupeOverlaps([...regexHits, ...nlpHits]);
+    const all = dropAllowed(
+      dedupeOverlaps([...denyHits(text), ...regexHits, ...nlpHits, ...ner.detections]),
+    );
     const topTier = all.length > 0
       ? (all.map((d) => tierOf(d.entityType)).sort((a, b) =>
           tierRank(a) - tierRank(b),
@@ -66,7 +78,7 @@ export async function analyze(
 
     const decision = getDecision(all);
 
-    return { detections: all, topTier, decision };
+    return { detections: all, topTier, decision, ...(ner.timedOut ? { nerTimedOut: true } : {}) };
   } catch (err) {
     console.error('[pii-airlock] detection engine error:', err);
     // Fail-closed: treat as block so PII is never silently passed through
@@ -74,6 +86,7 @@ export async function analyze(
       detections: [],
       topTier: 'high',
       decision: 'block',
+      error: true,
     };
   }
 }

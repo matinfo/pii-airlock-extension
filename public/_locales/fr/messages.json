@@ -1,0 +1,419 @@
+{
+  "extName": {
+    "message": "PII Airlock"
+  },
+  "extDesc": {
+    "message": "Remplace les données personnelles de vos messages avant leur envoi à une IA."
+  },
+  "appName": {
+    "message": "PII Airlock"
+  },
+  "chipReplace": {
+    "message": "$p1$ sera remplacé",
+    "placeholders": {
+      "p1": {
+        "content": "$1"
+      }
+    }
+  },
+  "chipReview": {
+    "message": "$p1$ à vérifier",
+    "placeholders": {
+      "p1": {
+        "content": "$1"
+      }
+    }
+  },
+  "chipNoticed": {
+    "message": "Repéré"
+  },
+  "chipPaused": {
+    "message": "En pause"
+  },
+  "panelLive": {
+    "message": "Remplacé à l’envoi"
+  },
+  "panelReview": {
+    "message": "À vérifier avant l’envoi"
+  },
+  "panelAfter": {
+    "message": "Remplacé dans votre dernier message"
+  },
+  "subLive": {
+    "message": "Décochez ce qui doit partir tel quel."
+  },
+  "subReview": {
+    "message": "Les éléments cochés sont remplacés par des repères."
+  },
+  "subAfter": {
+    "message": "L’assistant n’a vu que les repères."
+  },
+  "groupNoticed": {
+    "message": "Repéré, non modifié"
+  },
+  "btnCancel": {
+    "message": "Annuler"
+  },
+  "btnReplaceSend": {
+    "message": "Remplacer et envoyer"
+  },
+  "btnReplaceNow": {
+    "message": "Remplacer maintenant"
+  },
+  "rowAllow": {
+    "message": "Ne jamais remplacer"
+  },
+  "rowAlways": {
+    "message": "Toujours remplacer"
+  },
+  "rowDontReplace": {
+    "message": "Ne plus remplacer"
+  },
+  "toastOne": {
+    "message": "1 élément remplacé"
+  },
+  "toastMany": {
+    "message": "$p1$ éléments remplacés",
+    "placeholders": {
+      "p1": {
+        "content": "$1"
+      }
+    }
+  },
+  "toastDetails": {
+    "message": "Détails"
+  },
+  "namesSkipped": {
+    "message": "Modèle de noms en cours de chargement ; seule la liste intégrée a servi."
+  },
+  "errTitle": {
+    "message": "Impossible de vérifier ce message"
+  },
+  "errBody": {
+    "message": "La vérification a échoué, on ne sait rien de ce texte. Il n’a pas été envoyé."
+  },
+  "failTitle": {
+    "message": "Impossible de remplacer les données sensibles"
+  },
+  "failBody": {
+    "message": "L’éditeur n’a pas accepté la modification, le message n’a pas été envoyé. Retirez à la main :"
+  },
+  "btnEdit": {
+    "message": "Modifier le message"
+  },
+  "btnSendUnscanned": {
+    "message": "Envoyer sans vérifier"
+  },
+  "popActive": {
+    "message": "Cette page est protégée"
+  },
+  "popNoComposer": {
+    "message": "Aucune zone de saisie trouvée. Page non protégée."
+  },
+  "popUnsupported": {
+    "message": "Inactif sur ce site"
+  },
+  "popOff": {
+    "message": "La protection est désactivée"
+  },
+  "popSiteOff": {
+    "message": "Désactivé pour ce site"
+  },
+  "popPaused": {
+    "message": "En pause jusqu’à $p1$",
+    "placeholders": {
+      "p1": {
+        "content": "$1"
+      }
+    }
+  },
+  "popSiteToggle": {
+    "message": "Protéger $p1$",
+    "placeholders": {
+      "p1": {
+        "content": "$1"
+      }
+    }
+  },
+  "popMode": {
+    "message": "Mode"
+  },
+  "modeAuto": {
+    "message": "Auto"
+  },
+  "modeAutoHint": {
+    "message": "Remplace les données sensibles à l’envoi"
+  },
+  "modeReview": {
+    "message": "Vérifier"
+  },
+  "modeReviewHint": {
+    "message": "Montre les changements avant chaque envoi"
+  },
+  "modeOff": {
+    "message": "Désactivé"
+  },
+  "modeOffHint": {
+    "message": "Ne vérifie rien"
+  },
+  "popPause": {
+    "message": "Pause d’une heure"
+  },
+  "popResume": {
+    "message": "Reprendre"
+  },
+  "popScrubbed": {
+    "message": "$p1$ éléments remplacés à ce jour",
+    "placeholders": {
+      "p1": {
+        "content": "$1"
+      }
+    }
+  },
+  "popClear": {
+    "message": "Effacer les données de session"
+  },
+  "popClearHint": {
+    "message": "Oublie les repères, vos listes et le compteur."
+  },
+  "popCleared": {
+    "message": "Effacé"
+  },
+  "popNamesOn": {
+    "message": "Détection des noms renforcée"
+  },
+  "popNamesOnSub": {
+    "message": "Fonctionne sur votre appareil, rien n’est envoyé"
+  },
+  "popNamesOff": {
+    "message": "Détection des noms : de base"
+  },
+  "popNamesOffSub": {
+    "message": "Les noms rares peuvent échapper"
+  },
+  "popNamesCta": {
+    "message": "Améliorer"
+  },
+  "popSettings": {
+    "message": "Réglages"
+  },
+  "optTitle": {
+    "message": "Réglages"
+  },
+  "optMode": {
+    "message": "Protection"
+  },
+  "optEntities": {
+    "message": "Ce qui est remplacé"
+  },
+  "optEntitiesDesc": {
+    "message": "Modifier le comportement pour un type de donnée."
+  },
+  "colType": {
+    "message": "Type"
+  },
+  "colAction": {
+    "message": "Action"
+  },
+  "actDefault": {
+    "message": "Par défaut"
+  },
+  "actReplace": {
+    "message": "Remplacer"
+  },
+  "actAsk": {
+    "message": "Demander"
+  },
+  "actNotice": {
+    "message": "Signaler seulement"
+  },
+  "actAllow": {
+    "message": "Laisser tel quel"
+  },
+  "optLists": {
+    "message": "Vos listes"
+  },
+  "optListsDesc": {
+    "message": "Valeurs dont vous décidez vous-même. Stockées sur cet appareil uniquement, jamais synchronisées."
+  },
+  "optAllowed": {
+    "message": "Ne jamais remplacer"
+  },
+  "optAlways": {
+    "message": "Toujours remplacer"
+  },
+  "optAllowedDesc": {
+    "message": "Laissées telles quelles, même détectées. Exemple : le nom de votre entreprise."
+  },
+  "optAlwaysDesc": {
+    "message": "Toujours remplacées, même non détectées. Exemple : le nom de code d’un projet."
+  },
+  "optAllowedPh": {
+    "message": "ex. Acme SA"
+  },
+  "optAlwaysPh": {
+    "message": "ex. Projet Faucon"
+  },
+  "optAdd": {
+    "message": "Ajouter"
+  },
+  "optAsKind": {
+    "message": "Remplacer comme"
+  },
+  "optInvalid": {
+    "message": "Au moins 2 caractères, dont une lettre ou un chiffre."
+  },
+  "optConfirm": {
+    "message": "Confirmer après l’envoi"
+  },
+  "optConfirmHint": {
+    "message": "Afficher une courte note quand un message a été envoyé avec des remplacements."
+  },
+  "optResetTitle": {
+    "message": "Réinitialiser les réglages ?"
+  },
+  "optResetBody": {
+    "message": "Le mode, les choix par type et « Confirmer après l’envoi » reviennent aux valeurs par défaut. Vos listes et le modèle de noms sont conservés."
+  },
+  "badgeNoComposer": {
+    "message": "PII Airlock : aucune zone de saisie trouvée sur cette page. PAS protégé ici."
+  },
+  "optEmpty": {
+    "message": "Rien pour l’instant."
+  },
+  "optRemove": {
+    "message": "Retirer"
+  },
+  "optReset": {
+    "message": "Réinitialiser les réglages"
+  },
+  "optSaved": {
+    "message": "Enregistré"
+  },
+  "optFooter": {
+    "message": "Open source. Votre texte ne quitte jamais votre navigateur."
+  },
+  "nerTitle": {
+    "message": "Meilleure détection des noms"
+  },
+  "nerDesc": {
+    "message": "Repère les noms que la liste intégrée peut rater, surtout en anglais, français, allemand, espagnol, italien, portugais, néerlandais et chinois. Tout s’exécute sur cet appareil. Vos messages ne sont jamais envoyés ; seul le fichier du modèle est téléchargé, une fois, depuis huggingface.co (version figée, somme de contrôle vérifiée)."
+  },
+  "langTitle": {
+    "message": "Langues"
+  },
+  "langDesc": {
+    "message": "Ce qui est couvert, selon le type de donnée."
+  },
+  "langStructured": {
+    "message": "E-mails, téléphones, cartes, IBAN, identifiants, secrets"
+  },
+  "langStructuredVal": {
+    "message": "Toutes les langues"
+  },
+  "langNames": {
+    "message": "Noms, détection intégrée"
+  },
+  "langNamesVal": {
+    "message": "Prénoms courants en EN, FR, DE, IT, ES, PT, NL. Pas RU, JA, ZH."
+  },
+  "langModel": {
+    "message": "Noms, avec le modèle ci-dessus"
+  },
+  "langModelVal": {
+    "message": "EN, FR, DE, ES, IT, PT, NL, ZH (aussi AR, LV). Repère les noms rares."
+  },
+  "nerDownload": {
+    "message": "Télécharger le modèle ($p1$)",
+    "placeholders": {
+      "p1": {
+        "content": "$1"
+      }
+    }
+  },
+  "nerCancel": {
+    "message": "Annuler"
+  },
+  "nerInstalled": {
+    "message": "Installé ($p1$ sur le disque)",
+    "placeholders": {
+      "p1": {
+        "content": "$1"
+      }
+    }
+  },
+  "nerRemove": {
+    "message": "Supprimer"
+  },
+  "nerFailed": {
+    "message": "Échec du téléchargement : $p1$",
+    "placeholders": {
+      "p1": {
+        "content": "$1"
+      }
+    }
+  },
+  "nerRetry": {
+    "message": "Réessayer"
+  },
+  "ent_EMAIL_ADDRESS": {
+    "message": "Adresse e-mail"
+  },
+  "ent_PHONE_NUMBER": {
+    "message": "Numéro de téléphone"
+  },
+  "ent_CREDIT_CARD": {
+    "message": "Numéro de carte"
+  },
+  "ent_IBAN_CODE": {
+    "message": "IBAN"
+  },
+  "ent_SSN": {
+    "message": "Numéro de sécurité sociale"
+  },
+  "ent_IP_ADDRESS": {
+    "message": "Adresse IP"
+  },
+  "ent_IP_ADDRESS_PRIVATE": {
+    "message": "Adresse IP privée"
+  },
+  "ent_CRYPTO": {
+    "message": "Adresse crypto"
+  },
+  "ent_SECRET_KEY": {
+    "message": "Secret ou clé"
+  },
+  "ent_PERSON": {
+    "message": "Nom"
+  },
+  "ent_LOCATION": {
+    "message": "Lieu"
+  },
+  "ent_ORG": {
+    "message": "Organisation"
+  },
+  "ent_DATE_OF_BIRTH": {
+    "message": "Date de naissance"
+  },
+  "ent_FR_NIR": {
+    "message": "N° de sécurité sociale (FR)"
+  },
+  "ent_CH_AHV": {
+    "message": "N° AVS (CH)"
+  },
+  "ent_FR_SIRET": {
+    "message": "N° SIRET"
+  },
+  "ent_FR_SIREN": {
+    "message": "N° SIREN"
+  },
+  "ent_DE_TAX_ID": {
+    "message": "N° fiscal allemand"
+  },
+  "ent_DE_TAX_NUMBER": {
+    "message": "N° d’imposition allemand"
+  },
+  "ent_IT_VAT_CODE": {
+    "message": "N° de TVA italien"
+  }
+}
