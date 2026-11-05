@@ -25,7 +25,7 @@
  */
 
 import type { ChatAdapter } from './adapters/types';
-import { composerScope, isTextControl, setTextControl } from './adapters/dom';
+import { composerScope, isTextControl, pasteReplace, setTextControl } from './adapters/dom';
 import { analyze } from './detection/engine';
 import type { Detection, DetectionResult } from './detection/types';
 import { BrowserMapping } from './mapping';
@@ -414,10 +414,20 @@ export class SendGuard {
     toScrub: Detection[],
   ): Promise<boolean> {
     const scrubbed = this.mapping.scrub(text, toScrub);
+    const tokens = toScrub.map((d) => this.mapping.tokenFor(d.entityType, d.value));
+    // Committed = no raw value left AND every token present (an editor that
+    // silently truncates the write would otherwise "pass" by losing the text).
+    const committed = () => {
+      const after = this.read(editable);
+      return !toScrub.some((d) => containsValue(after, d.value)) && tokens.every((t) => after.includes(t));
+    };
     this.write(editable, scrubbed);
     await frame();
-    const after = this.read(editable);
-    return !toScrub.some((d) => containsValue(after, d.value));
+    if (committed()) return true;
+    if (isTextControl(editable)) return false;
+    await pasteReplace(editable, scrubbed);
+    await frame();
+    return committed();
   }
 
   /** Paste banner "Scrub now": analyse the CURRENT full composer text and scrub it. */

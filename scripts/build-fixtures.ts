@@ -2,7 +2,7 @@ import { mkdirSync } from 'node:fs';
 export async function buildFixtures(): Promise<string> {
   mkdirSync('e2e/.dist', { recursive: true });
   const r = await Bun.build({
-    entrypoints: ['e2e/fixtures/pm-app.ts'],
+    entrypoints: ['e2e/fixtures/pm-app.ts', 'e2e/fixtures/lexical-app.ts'],
     outdir: 'e2e/.dist',
     target: 'browser',
   });

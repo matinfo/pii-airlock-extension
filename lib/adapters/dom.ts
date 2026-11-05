@@ -39,6 +39,30 @@ export function replaceContentEditable(composer: HTMLElement, text: string): voi
 }
 
 /**
+ * Second-chance write for rich editors that mishandle `execCommand('insertText')`
+ * (Lexical drops everything after a newline, and reads a stale selection if it is
+ * used in the same tick). Select everything, let the editor sync its selection,
+ * then hand it the text as a paste: editors parse pastes natively, newlines
+ * included. Callers verify the result.
+ */
+export async function pasteReplace(composer: HTMLElement, text: string): Promise<void> {
+  composer.focus();
+  const sel = window.getSelection();
+  const range = document.createRange();
+  range.selectNodeContents(composer);
+  sel?.removeAllRanges();
+  sel?.addRange(range);
+  await new Promise((r) => setTimeout(r, 60));
+  try {
+    const data = new DataTransfer();
+    data.setData('text/plain', text);
+    composer.dispatchEvent(new ClipboardEvent('paste', { clipboardData: data, bubbles: true, cancelable: true }));
+  } catch {
+    /* no ClipboardEvent/DataTransfer support: the caller's verification fails closed */
+  }
+}
+
+/**
  * The container that owns a composer and its send button: the enclosing form,
  * else a few ancestors up. Send-button lookups are limited to this scope so a
  * generic selector like `button[type=submit]` can't match an unrelated button
