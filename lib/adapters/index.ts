@@ -15,6 +15,12 @@ import { huggingfaceAdapter } from './huggingface';
 import { youAdapter } from './you';
 import { genericAdapter } from './generic';
 
+/**
+ * Only the sites in the content-script `matches` (entrypoints/content.ts) are
+ * supported. poe / character / mistral / huggingface / you adapters are kept but
+ * NOT shipped: they have never been verified on the live site. Re-add the host to
+ * `matches` + `host_permissions` once one has passed a real-browser check.
+ */
 const NAMED: Array<{ hosts: string[]; adapter: ChatAdapter }> = [
   { hosts: ['chatgpt.com', 'chat.openai.com'], adapter: chatgptAdapter },
   { hosts: ['claude.ai'],                      adapter: claudeAdapter },

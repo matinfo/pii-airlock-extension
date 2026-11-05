@@ -67,11 +67,6 @@ export default defineConfig({
       'https://copilot.microsoft.com/*',
       'https://copilot.cloud.microsoft/*',
       'https://*.perplexity.ai/*',
-      'https://poe.com/*',
-      'https://character.ai/*',
-      'https://*.mistral.ai/*',
-      'https://huggingface.co/*',
-      'https://you.com/*',
     ],
     action: {
       default_title: 'PII Airlock',

@@ -6,7 +6,7 @@ A **standalone WXT browser extension** (Chrome/Edge MV3 + Firefox MV2) that auto
 
 - **No backend required.** Zero install friction — installs from browser store, works immediately.
 - **Pure JS detection engine** bundled inside the extension (compromise.js NER + regex).
-- Targets: ChatGPT, Claude, Gemini, Copilot, Perplexity, Poe, and more via heuristic fallback.
+- Targets (verified live): ChatGPT, Claude, Gemini, Copilot, Perplexity. Other adapters (Poe, character, mistral, huggingface, you) exist but are not shipped until verified on the live site.
 - Optional enhanced mode: if `pii-airlock` Python proxy runs on localhost:8745, the extension upgrades to Presidio+spaCy quality automatically.
 
 ## Related project
