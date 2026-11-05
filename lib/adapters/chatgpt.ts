@@ -11,6 +11,9 @@ export const chatgptAdapter: ChatAdapter = {
       document.querySelector<HTMLElement>('#prompt-textarea') ??
       document.querySelector<HTMLElement>('[data-testid="prompt-textarea"]') ??
       document.querySelector<HTMLElement>('div[contenteditable="true"].ProseMirror') ??
+      // Logged-out chatgpt.com: a plain textarea, no ProseMirror.
+      document.querySelector<HTMLElement>('textarea#mobile-composer-prompt') ??
+      document.querySelector<HTMLElement>('textarea[name="prompt"]') ??
       null
     );
   },
@@ -19,11 +22,13 @@ export const chatgptAdapter: ChatAdapter = {
     return (
       document.querySelector<HTMLElement>('[data-testid="send-button"]') ??
       document.querySelector<HTMLElement>('button[aria-label="Send prompt"]') ??
+      document.querySelector<HTMLElement>('button[aria-label*="Send" i]') ??
       null
     );
   },
 
   getText(composer: HTMLElement): string {
+    if (composer instanceof HTMLTextAreaElement) return composer.value;
     return composer.innerText ?? '';
   },
 
