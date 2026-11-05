@@ -134,7 +134,17 @@ tones use `color-mix`. Keep copy short, no emoji, no gradients.
 
 `<ENTITY_TYPE_N>` — e.g. `<EMAIL_ADDRESS_1>`, `<PERSON_2>`.
 Identical to pii-airlock Python format. BrowserMapping holds token↔value in
-memory only, cleared on page unload. Never written to chrome.storage.
+the content script's memory, mirrored per tab in `storage.session` (RAM only,
+dropped when the browser closes, removed when the tab closes) through the
+background (`MAP_LOAD`/`MAP_SAVE`), so a reload keeps numbering. Never in
+storage.local/sync. Panic clear wipes it.
+
+**Restore (`lib/restore.ts`):** a MutationObserver edits text-node `nodeValue`
+in place (no wrappers, composers/textareas skipped), so the page shows real values
+while the backend only ever got tokens. Selector-free by design. Known limits:
+native Copy buttons copy tokens; a markdown renderer that swallows `<TOKEN_1>` as
+an unknown HTML tag leaves nothing to restore (needs a live-site check per site);
+old chats opened after a browser restart show tokens.
 
 ## Key invariants (never break these)
 
