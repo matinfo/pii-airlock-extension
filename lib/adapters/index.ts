@@ -19,7 +19,7 @@ const NAMED: Array<{ hosts: string[]; adapter: ChatAdapter }> = [
   { hosts: ['chatgpt.com', 'chat.openai.com'], adapter: chatgptAdapter },
   { hosts: ['claude.ai'],                      adapter: claudeAdapter },
   { hosts: ['gemini.google.com'],              adapter: geminiAdapter },
-  { hosts: ['copilot.microsoft.com'],          adapter: copilotAdapter },
+  { hosts: ['copilot.microsoft.com', 'copilot.cloud.microsoft'], adapter: copilotAdapter },
   { hosts: ['perplexity.ai'],                  adapter: perplexityAdapter },
   { hosts: ['poe.com'],                        adapter: poeAdapter },
   { hosts: ['character.ai'],                   adapter: characterAdapter },

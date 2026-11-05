@@ -15,6 +15,7 @@ export default defineContentScript({
     '*://claude.ai/*',
     '*://gemini.google.com/*',
     '*://copilot.microsoft.com/*',
+    '*://copilot.cloud.microsoft/*',
     '*://*.perplexity.ai/*',
     '*://poe.com/*',
     '*://character.ai/*',

@@ -1,4 +1,4 @@
-/** Adapter for copilot.microsoft.com. */
+/** Adapter for copilot.microsoft.com and copilot.cloud.microsoft (Microsoft 365 Copilot). */
 
 import type { ChatAdapter } from './types';
 import { replaceContentEditable, queryInScope } from './dom';
@@ -11,6 +11,9 @@ export const copilotAdapter: ChatAdapter = {
       document.querySelector<HTMLElement>('#userInput') ??
       document.querySelector<HTMLElement>('textarea[placeholder*="Message"]') ??
       document.querySelector<HTMLElement>('textarea[aria-label*="chat" i]') ??
+      // copilot.cloud.microsoft: rich contenteditable textbox instead of a textarea.
+      document.querySelector<HTMLElement>('#m365-chat-editor-target-element') ??
+      document.querySelector<HTMLElement>('[role="textbox"][contenteditable="true"]') ??
       null
     );
   },
