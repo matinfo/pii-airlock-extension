@@ -1,9 +1,47 @@
-# PII Airlock Extension
+<div align="center">
 
-A browser extension that replaces personal data in your AI chat messages with placeholders before they are sent.
+<img src="public/icon/128.png" alt="PII Airlock logo" width="96" height="96">
 
-Works on **Claude, ChatGPT, Gemini, Copilot, Perplexity and Mistral.**
-No account and no server: install it and it protects those sites. Better name detection is optional (see below).
+# PII Airlock
+
+**Your chats get the placeholders. You keep the secrets.**
+
+A browser extension that swaps personal data for placeholders in AI chat messages, on your device, before you hit send.
+
+[![CI](https://github.com/matinfo/pii-airlock-extension/actions/workflows/ci.yml/badge.svg)](https://github.com/matinfo/pii-airlock-extension/actions/workflows/ci.yml)
+[![License: MIT](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
+![Version](https://img.shields.io/badge/version-0.1.0-blue)
+![Chrome MV3](https://img.shields.io/badge/Chrome-MV3-4285F4?logo=googlechrome&logoColor=white)
+![Firefox](https://img.shields.io/badge/Firefox-MV2-FF7139?logo=firefoxbrowser&logoColor=white)
+![Local only](https://img.shields.io/badge/privacy-100%25%20on--device-brightgreen)
+![No account](https://img.shields.io/badge/account-none-lightgrey)
+![TypeScript](https://img.shields.io/badge/TypeScript-strict-3178C6?logo=typescript&logoColor=white)
+![Built with WXT](https://img.shields.io/badge/built%20with-WXT-67D55E)
+
+Works on **Claude · ChatGPT · Gemini · Copilot · Perplexity · Mistral**
+
+<br>
+
+<img src="store-assets/chrome/1-live-chip.png" alt="Chip near the composer counting what will be replaced" width="720">
+
+</div>
+
+## Why
+
+Everything you paste into a chatbot is sent to a third party. PII Airlock sits between your keyboard and the send button: it spots emails, phones, cards, IBANs, secrets and names, and sends `<EMAIL_ADDRESS_1>` instead. The answer comes back with your real values restored on screen.
+
+```text
+You type   Mail alice@corp.com, card 4111 1111 1111 1111
+Chat sees  Mail <EMAIL_ADDRESS_1>, card <CREDIT_CARD_1>
+```
+
+- **Zero setup.** No account, no server, no API key.
+- **Fail-closed.** If the check errors, the message is not sent.
+- **On-device.** Your text never leaves the browser.
+
+<div align="center">
+<img src="store-assets/chrome/2-review.png" alt="Review panel before sending" width="560">
+</div>
 
 ---
 
