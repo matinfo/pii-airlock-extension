@@ -122,7 +122,7 @@ export default defineBackground(() => {
     } else if (m?.type === MSG.HEALTH && sender.tab?.id !== undefined) {
       const tabId = sender.tab.id;
       const state = m.state === 'warn' || m.state === 'off' ? m.state : 'on';
-      const path = Object.fromEntries([16, 32, 48].map((n) => [n, `/icon-state/${state}-${n}.png`]));
+      const path = Object.fromEntries([16, 32, 48].map((n) => [n, state === 'off' ? `/icon/${n}.png` : `/icon-state/${state}-${n}.png`]));
       void browser.action.setIcon({ tabId, path: path as never }).catch(() => {});
       void browser.action.setTitle({
         tabId,

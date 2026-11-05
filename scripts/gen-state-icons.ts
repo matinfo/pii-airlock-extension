@@ -1,14 +1,14 @@
 /**
  * Renders the toolbar icon variants with a status mark at the top right:
- * on (green dot), warn (orange diamond), off (grey dot). Orange has a distinct
- * shape; grey is neutral so colour is enough. Output is committed (public/icon-state/),
+ * on (green dot) and warn (orange diamond; distinct shape). Off has no mark:
+ * the plain icon is used. Output is committed (public/icon-state/),
  * so builds stay reproducible. Run: bun scripts/gen-state-icons.ts
  */
 import { chromium } from '@playwright/test';
 import { readFileSync, mkdirSync } from 'node:fs';
 
 const SIZES = [16, 32, 48];
-const STATES = ['on', 'warn', 'off'] as const;
+const STATES = ['on', 'warn'] as const;
 mkdirSync('public/icon-state', { recursive: true });
 
 const b = await chromium.launch();
@@ -34,7 +34,7 @@ for (const size of SIZES) {
         if (state === 'warn') { g.moveTo(cx, cy - r * 1.2); g.lineTo(cx + r * 1.2, cy); g.lineTo(cx, cy + r * 1.2); g.lineTo(cx - r * 1.2, cy); g.closePath(); }
         else g.arc(cx, cy, r, 0, Math.PI * 2);
       };
-      g.fillStyle = state === 'on' ? '#16a34a' : state === 'warn' ? '#f59e0b' : '#b4bac4';
+      g.fillStyle = state === 'on' ? '#16a34a' : '#f59e0b';
       path(); g.fill();
     }, { src, size, state });
     await page.locator('#c').screenshot({ path: `public/icon-state/${state}-${size}.png`, omitBackground: true });
