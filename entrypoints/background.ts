@@ -116,21 +116,18 @@ export default defineBackground(() => {
   };
 
   browser.runtime.onMessage.addListener((msg, sender) => {
-    const m = msg as { type?: string; count?: number; ok?: boolean };
+    const m = msg as { type?: string; count?: number; state?: string };
     if (m?.type === MSG.SCRUBBED && typeof m.count === 'number') {
       addToCounter(m.count);
     } else if (m?.type === MSG.HEALTH && sender.tab?.id !== undefined) {
       const tabId = sender.tab.id;
-      void browser.action.setBadgeText({ tabId, text: m.ok ? '' : '!' });
-      if (!m.ok) {
-        void browser.action.setBadgeBackgroundColor({ tabId, color: '#d97706' });
-        void browser.action.setTitle({
-          tabId,
-          title: t('badgeNoComposer'),
-        });
-      } else {
-        void browser.action.setTitle({ tabId, title: t('appName') });
-      }
+      const state = m.state === 'warn' || m.state === 'off' ? m.state : 'on';
+      const path = Object.fromEntries([16, 32, 48].map((n) => [n, state === 'off' ? `/icon/${n}.png` : `/icon-state/${state}-${n}.png`]));
+      void browser.action.setIcon({ tabId, path: path as never }).catch(() => {});
+      void browser.action.setTitle({
+        tabId,
+        title: state === 'warn' ? t('badgeNoComposer') : `${t('appName')}: ${t(state === 'on' ? 'popActive' : 'popOff')}`,
+      });
     }
     return false;
   });
