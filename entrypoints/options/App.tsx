@@ -167,12 +167,7 @@ function ListBox({ title, items, sub, onRemove }: { title: string; items: string
 }
 
 function Shield() {
-  return (
-    <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-      <path d="M12 3 5 6v5.5c0 4.3 2.9 7.6 7 9.5 4.1-1.9 7-5.2 7-9.5V6l-7-3Z" />
-      <path d="m9 12 2 2 4-4" />
-    </svg>
-  );
+  return <img src={browser.runtime.getURL("/icon/48.png" as never)} width={20} height={20} alt="" aria-hidden="true" />;
 }
 
 export default App;
