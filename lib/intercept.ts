@@ -132,12 +132,12 @@ export class SendGuard {
   install(): void {
     if (this._installed) return;
     this._installed = true;
-    document.addEventListener('keydown', this._onKeydown, true);
-    document.addEventListener('click', this._onClick, true);
-    document.addEventListener('submit', this._onSubmit, true);
-    document.addEventListener('paste', this._onPaste, true);
-    document.addEventListener('drop', this._onDrop, true);
-    document.addEventListener('input', this._onInput, true);
+    window.addEventListener('keydown', this._onKeydown, true);
+    window.addEventListener('click', this._onClick, true);
+    window.addEventListener('submit', this._onSubmit, true);
+    window.addEventListener('paste', this._onPaste, true);
+    window.addEventListener('drop', this._onDrop, true);
+    window.addEventListener('input', this._onInput, true);
     shield.init(() => this.anchor(), {
       onToggle: (key, checked) => { if (checked) this.excluded.delete(key); else this.excluded.add(key); },
       onAllow: (item) => this.allowValue(item),
@@ -151,12 +151,12 @@ export class SendGuard {
     this._installed = false;
     clearTimeout(this.scanTimer);
     shield.destroy();
-    document.removeEventListener('input', this._onInput, true);
-    document.removeEventListener('keydown', this._onKeydown, true);
-    document.removeEventListener('click', this._onClick, true);
-    document.removeEventListener('submit', this._onSubmit, true);
-    document.removeEventListener('paste', this._onPaste, true);
-    document.removeEventListener('drop', this._onDrop, true);
+    window.removeEventListener('input', this._onInput, true);
+    window.removeEventListener('keydown', this._onKeydown, true);
+    window.removeEventListener('click', this._onClick, true);
+    window.removeEventListener('submit', this._onSubmit, true);
+    window.removeEventListener('paste', this._onPaste, true);
+    window.removeEventListener('drop', this._onDrop, true);
     this.mapping.clear();
   }
 
