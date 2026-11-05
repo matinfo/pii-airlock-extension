@@ -2,6 +2,7 @@ name: Release
 # Tag vX.Y.Z on main -> full CI -> GitHub release -> store submissions.
 # Each store is a separate job behind its own GitHub Environment (add required
 # reviewers there = manual approval gate). One store failing never blocks the others.
+# Edge is built and zipped but not auto-submitted (upload manually for now).
 on:
   push:
     tags: ['v*.*.*']
@@ -125,26 +126,3 @@ jobs:
           FIREFOX_JWT_SECRET: ${{ secrets.FIREFOX_JWT_SECRET }}
           DRY_RUN: ${{ github.event_name == 'workflow_dispatch' && inputs.dry_run && 'true' || '' }}
         run: bunx wxt submit ${DRY_RUN:+--dry-run} --firefox-zip dist/*-firefox.zip --firefox-sources-zip dist/*-sources.zip
-
-  edge:
-    needs: package
-    runs-on: ubuntu-latest
-    environment: edge-addons
-    timeout-minutes: 15
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          persist-credentials: false
-      - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
-      - run: bun install --frozen-lockfile
-      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
-        with:
-          name: release-zips
-          path: dist
-      - name: Submit to Edge Add-ons
-        env:
-          EDGE_PRODUCT_ID: ${{ secrets.EDGE_PRODUCT_ID }}
-          EDGE_CLIENT_ID: ${{ secrets.EDGE_CLIENT_ID }}
-          EDGE_API_KEY: ${{ secrets.EDGE_API_KEY }}
-          DRY_RUN: ${{ github.event_name == 'workflow_dispatch' && inputs.dry_run && 'true' || '' }}
-        run: bunx wxt submit ${DRY_RUN:+--dry-run} --edge-zip dist/*-edge.zip
