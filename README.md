@@ -58,7 +58,7 @@ Names use two layers: a fast built-in English lexicon, and an optional on-device
 | Emails, phones, cards, IBANs, national IDs, secrets | Any language (pattern based; phone numbers are matched by region) |
 | Names, built-in | Common first names in English, French, German, Italian, Spanish, Portuguese, Dutch. Not Russian, Japanese or Chinese. |
 | Names, with the optional model | English, French, German, Spanish, Italian, Portuguese, Dutch, Chinese (also Arabic, Latvian). Catches unusual surnames. |
-| Interface | English, French, German |
+| Interface | English, French, German, Spanish, Italian (Spanish and Italian are drafts awaiting native review) |
 
 The same table is in the extension's Settings page.
 

@@ -1,8 +1,10 @@
 #!/usr/bin/env python3
-"""Generate public/_locales/{en,fr,de}/messages.json from one table.
+"""Generate public/_locales/{en,fr,de,es,it}/messages.json (en/fr/de here, es/it in locales_extra.py).
 Placeholders: write $1 in a string; it becomes a named placeholder block.
 Run: python3 scripts/gen-locales.py"""
-import json, re, pathlib
+import json, re, pathlib, sys
+sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
+from locales_extra import EXTRA
 
 T = {
  # key: (en, fr, de)
@@ -146,10 +148,14 @@ T = {
 }
 
 root = pathlib.Path(__file__).resolve().parent.parent / 'public' / '_locales'
-for i, lang in enumerate(['en', 'fr', 'de']):
+for lang in ['en', 'fr', 'de', 'es', 'it']:
+    i = ['en', 'fr', 'de'].index(lang) if lang in ('en', 'fr', 'de') else -1
+    if i < 0:
+        missing = set(T) - set(EXTRA[lang]); extra = set(EXTRA[lang]) - set(T)
+        assert not missing and not extra, (lang, sorted(missing), sorted(extra))
     out = {}
     for k, vals in T.items():
-        msg = vals[i]
+        msg = vals[i] if i >= 0 else EXTRA[lang][k]
         entry = {'message': msg}
         # chrome.i18n forbids bare $1: use named placeholders
         if re.search(r'\$\d', msg):
