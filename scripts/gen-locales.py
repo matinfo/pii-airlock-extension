@@ -65,6 +65,11 @@ T = {
  'popClear': ('Clear session data', 'Effacer les données de session', 'Sitzungsdaten löschen'),
  'popClearHint': ('Forgets placeholders, your lists and the counter.', 'Oublie les repères, vos listes et le compteur.', 'Vergisst Platzhalter, Ihre Listen und den Zähler.'),
  'popCleared': ('Cleared', 'Effacé', 'Gelöscht'),
+ 'popNamesOn': ('Name detection: enhanced', 'Détection des noms : renforcée', 'Namenserkennung: erweitert'),
+ 'popNamesOnSub': ('Local model active', 'Modèle local actif', 'Lokales Modell aktiv'),
+ 'popNamesOff': ('Name detection: basic', 'Détection des noms : de base', 'Namenserkennung: einfach'),
+ 'popNamesOffSub': ('Unusual names can be missed', 'Les noms rares peuvent échapper', 'Ungewöhnliche Namen können fehlen'),
+ 'popNamesCta': ('Improve', 'Améliorer', 'Verbessern'),
  'popSettings': ('Settings', 'Réglages', 'Einstellungen'),
  # options
  'optTitle': ('Settings', 'Réglages', 'Einstellungen'),

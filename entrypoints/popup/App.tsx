@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { MSG } from "~/lib/messages";
 import { t } from "~/lib/i18n";
 import type { Mode } from "~/lib/policy";
+import { isInstalled } from "~/lib/ner-model";
 import "./App.css";
 
 interface TabStatus {
@@ -35,6 +36,7 @@ function App() {
   const [tab, setTab] = useState<TabStatus | null>(null);
   const [cleared, setCleared] = useState(false);
   const [now, setNow] = useState(Date.now());
+  const [names, setNames] = useState<boolean | null>(null);
 
   useEffect(() => {
     browser.storage.sync.get({ mode: "auto", sitesOff: [] }).then((s) => {
@@ -54,6 +56,7 @@ function App() {
         setTab(null);
       }
     });
+    void isInstalled().then(setNames);
     const timer = setInterval(() => setNow(Date.now()), 30_000);
     return () => clearInterval(timer);
   }, []);
@@ -120,6 +123,20 @@ function App() {
             <span className="knob" />
           </button>
         </label>
+      )}
+
+      {names !== null && mode !== "off" && (
+        <section className={`names ${names ? "on" : ""}`}>
+          <div>
+            <div className="status-text">{names ? t("popNamesOn") : t("popNamesOff")}</div>
+            <div className="status-sub">{names ? t("popNamesOnSub") : t("popNamesOffSub")}</div>
+          </div>
+          {!names && (
+            <button className="btn small" onClick={() => browser.tabs.create({ url: browser.runtime.getURL("/options.html#names" as never) })}>
+              {t("popNamesCta")}
+            </button>
+          )}
+        </section>
       )}
 
       <fieldset className="modes">

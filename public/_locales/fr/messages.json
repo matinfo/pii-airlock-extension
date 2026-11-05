@@ -179,6 +179,21 @@
   "popCleared": {
     "message": "Effacé"
   },
+  "popNamesOn": {
+    "message": "Détection des noms : renforcée"
+  },
+  "popNamesOnSub": {
+    "message": "Modèle local actif"
+  },
+  "popNamesOff": {
+    "message": "Détection des noms : de base"
+  },
+  "popNamesOffSub": {
+    "message": "Les noms rares peuvent échapper"
+  },
+  "popNamesCta": {
+    "message": "Améliorer"
+  },
   "popSettings": {
     "message": "Réglages"
   },

@@ -44,6 +44,11 @@ test('opt-in: download is verified, then an unlisted name is scrubbed', async ({
   srv.close();
   expect(hf.every((u) => /\/resolve\/263e82c06569c8c2ac46238a7ae5107598934234\//.test(u))).toBe(true);
 
+  const popup = await h.context.newPage();
+  await popup.goto(`chrome-extension://${id}/popup.html`);
+  await expect(popup.getByText('Name detection: enhanced')).toBeVisible();
+  await popup.close();
+
   await h.setSettings(AUTO);
   await h.page.bringToFront();
   await h.page.click('#prompt-textarea'); // focus warms the model

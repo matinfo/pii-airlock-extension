@@ -49,7 +49,7 @@ export default function NerSection() {
 
   const size = mb(NER_TOTAL_BYTES);
   return (
-    <section>
+    <section id="names">
       <h2>{t("nerTitle")}</h2>
       <p className="desc">{t("nerDesc")}</p>
       <div className="group pad">

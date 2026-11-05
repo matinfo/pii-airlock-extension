@@ -63,3 +63,8 @@ header { display: flex; align-items: center; justify-content: space-between; }
 footer { display: flex; align-items: center; justify-content: space-between; color: var(--muted); font-size: 12px; padding-top: 10px; border-top: 1px solid var(--border); }
 
 @media (prefers-reduced-motion: reduce) { .switch, .knob { transition: none; } }
+
+.names { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 10px 12px; border: 1px solid var(--border); border-radius: 10px; }
+.names.on { border-style: solid; }
+.btn.small { height: 28px; padding: 0 12px; background: var(--accent); color: var(--accent-fg); border-color: transparent; flex: none; }
+.btn.small:hover { filter: brightness(1.1); }

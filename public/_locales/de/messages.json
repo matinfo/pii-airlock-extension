@@ -179,6 +179,21 @@
   "popCleared": {
     "message": "Gelöscht"
   },
+  "popNamesOn": {
+    "message": "Namenserkennung: erweitert"
+  },
+  "popNamesOnSub": {
+    "message": "Lokales Modell aktiv"
+  },
+  "popNamesOff": {
+    "message": "Namenserkennung: einfach"
+  },
+  "popNamesOffSub": {
+    "message": "Ungewöhnliche Namen können fehlen"
+  },
+  "popNamesCta": {
+    "message": "Verbessern"
+  },
   "popSettings": {
     "message": "Einstellungen"
   },
