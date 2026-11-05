@@ -62,3 +62,5 @@ progress { flex: 1; height: 6px; accent-color: var(--accent); }
 footer { display: flex; align-items: center; justify-content: space-between; color: var(--muted); font-size: 12px; padding-top: 12px; border-top: 1px solid var(--border); }
 
 @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+.row.lang { align-items: flex-start; }
+.row.lang .muted { color: var(--muted); font-size: 12px; text-align: right; max-width: 55%; }

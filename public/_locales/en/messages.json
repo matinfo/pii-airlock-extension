@@ -261,7 +261,31 @@
     "message": "Better name detection"
   },
   "nerDesc": {
-    "message": "Finds names the built-in list can miss, in any language. It runs on this device. Your messages are never sent anywhere; only the model file is downloaded, once, from huggingface.co (pinned version, checksum verified)."
+    "message": "Finds names the built-in list can miss, best in English, French, German, Spanish, Italian, Portuguese, Dutch and Chinese. It runs on this device. Your messages are never sent anywhere; only the model file is downloaded, once, from huggingface.co (pinned version, checksum verified)."
+  },
+  "langTitle": {
+    "message": "Languages"
+  },
+  "langDesc": {
+    "message": "What is covered, by kind of data."
+  },
+  "langStructured": {
+    "message": "Emails, phones, cards, IBANs, IDs, secrets"
+  },
+  "langStructuredVal": {
+    "message": "Any language"
+  },
+  "langNames": {
+    "message": "Names, built-in"
+  },
+  "langNamesVal": {
+    "message": "Common first names in EN, FR, DE, IT, ES, PT, NL. Not RU, JA, ZH."
+  },
+  "langModel": {
+    "message": "Names, with the model above"
+  },
+  "langModelVal": {
+    "message": "EN, FR, DE, ES, IT, PT, NL, ZH (also AR, LV). Catches unusual surnames."
   },
   "nerDownload": {
     "message": "Download model ($p1$)",

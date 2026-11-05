@@ -7,11 +7,11 @@ A **standalone WXT browser extension** (Chrome/Edge MV3 + Firefox MV2) that auto
 - **No backend required.** Zero install friction — installs from browser store, works immediately.
 - **Pure JS detection engine** bundled inside the extension (compromise.js NER + regex).
 - Targets (verified live): ChatGPT, Claude, Gemini, Copilot, Perplexity. Other adapters (Poe, character, mistral, huggingface, you) exist but are not shipped until verified on the live site.
-- Optional enhanced mode: if `pii-airlock` Python proxy runs on localhost:8745, the extension upgrades to Presidio+spaCy quality automatically.
+- Enhanced mode via the `pii-airlock` proxy (localhost:8745) is NOT implemented (no code talks to it). Do not document it to users until it exists; "better detection" today = the opt-in on-device names model.
 
 ## Related project
 
-`../pii-airlock/` — Python CLI + proxy that this extension can optionally delegate to.
+`../pii-airlock/` — Python CLI + proxy. Reference for token format and logic only; the extension does not call it today.
 See `../pii-airlock/pii_scrub/` for the reference detection/mapping/payload logic.
 Token format `<ENTITY_TYPE_N>` is shared between both projects.
 
@@ -150,7 +150,7 @@ old chats opened after a browser restart show tokens.
 
 1. **Fail-closed**: if detection throws, the send is BLOCKED (Edit or explicit "Send unchecked"), never silently allowed.
 2. **No page text in persistent storage**: BrowserMapping lives in memory (plus the RAM-only `storage.session` copy). `storage.sync` holds settings only. `storage.local` holds the counter, pause and the user's own allow/deny values (typed or chosen by them; never synced). Panic clear wipes lists + mapping.
-3. **No network calls**: extension never sends text to any remote service (only to localhost if pii-airlock enhanced mode is explicitly enabled by user).
+3. **No network calls**: extension never sends text to any remote service (the only fetch is the opt-in, checksum-verified names-model download).
 4. **Adapters are fragile**: provider UI changes break selectors. MutationObserver re-attaches on DOM changes. Adapter version strings must be bumped on selector updates.
 
 ## Commands

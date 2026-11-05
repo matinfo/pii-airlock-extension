@@ -83,6 +83,19 @@ function App() {
 
       <NerSection />
 
+      <section id="languages">
+        <h2>{t("langTitle")}</h2>
+        <p className="desc">{t("langDesc")}</p>
+        <ul className="group">
+          {(["Structured", "Names", "Model"] as const).map((k) => (
+            <li key={k} className="row lang">
+              <span>{t(`lang${k}`)}</span>
+              <span className="muted">{t(`lang${k}Val`)}</span>
+            </li>
+          ))}
+        </ul>
+      </section>
+
       <section>
         <h2>{t("optEntities")}</h2>
         <p className="desc">{t("optEntitiesDesc")}</p>

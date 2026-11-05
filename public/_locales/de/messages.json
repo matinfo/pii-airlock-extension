@@ -261,7 +261,31 @@
     "message": "Bessere Namenserkennung"
   },
   "nerDesc": {
-    "message": "Findet Namen, die die eingebaute Liste übersieht, in jeder Sprache. Läuft auf diesem Gerät. Ihre Nachrichten werden nie gesendet; nur die Modelldatei wird einmal von huggingface.co geladen (feste Version, Prüfsumme geprüft)."
+    "message": "Findet Namen, die die eingebaute Liste übersieht, am besten auf Englisch, Französisch, Deutsch, Spanisch, Italienisch, Portugiesisch, Niederländisch und Chinesisch. Läuft auf diesem Gerät. Ihre Nachrichten werden nie gesendet; nur die Modelldatei wird einmal von huggingface.co geladen (feste Version, Prüfsumme geprüft)."
+  },
+  "langTitle": {
+    "message": "Sprachen"
+  },
+  "langDesc": {
+    "message": "Was abgedeckt ist, je nach Datentyp."
+  },
+  "langStructured": {
+    "message": "E-Mails, Telefon, Karten, IBAN, Kennungen, Geheimnisse"
+  },
+  "langStructuredVal": {
+    "message": "Jede Sprache"
+  },
+  "langNames": {
+    "message": "Namen, eingebaut"
+  },
+  "langNamesVal": {
+    "message": "Häufige Vornamen in EN, FR, DE, IT, ES, PT, NL. Nicht RU, JA, ZH."
+  },
+  "langModel": {
+    "message": "Namen, mit dem Modell oben"
+  },
+  "langModelVal": {
+    "message": "EN, FR, DE, ES, IT, PT, NL, ZH (auch AR, LV). Findet seltene Nachnamen."
   },
   "nerDownload": {
     "message": "Modell laden ($p1$)",

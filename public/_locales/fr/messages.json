@@ -261,7 +261,31 @@
     "message": "Meilleure détection des noms"
   },
   "nerDesc": {
-    "message": "Repère les noms que la liste intégrée peut rater, dans toutes les langues. Tout s’exécute sur cet appareil. Vos messages ne sont jamais envoyés ; seul le fichier du modèle est téléchargé, une fois, depuis huggingface.co (version figée, somme de contrôle vérifiée)."
+    "message": "Repère les noms que la liste intégrée peut rater, surtout en anglais, français, allemand, espagnol, italien, portugais, néerlandais et chinois. Tout s’exécute sur cet appareil. Vos messages ne sont jamais envoyés ; seul le fichier du modèle est téléchargé, une fois, depuis huggingface.co (version figée, somme de contrôle vérifiée)."
+  },
+  "langTitle": {
+    "message": "Langues"
+  },
+  "langDesc": {
+    "message": "Ce qui est couvert, selon le type de donnée."
+  },
+  "langStructured": {
+    "message": "E-mails, téléphones, cartes, IBAN, identifiants, secrets"
+  },
+  "langStructuredVal": {
+    "message": "Toutes les langues"
+  },
+  "langNames": {
+    "message": "Noms, détection intégrée"
+  },
+  "langNamesVal": {
+    "message": "Prénoms courants en EN, FR, DE, IT, ES, PT, NL. Pas RU, JA, ZH."
+  },
+  "langModel": {
+    "message": "Noms, avec le modèle ci-dessus"
+  },
+  "langModelVal": {
+    "message": "EN, FR, DE, ES, IT, PT, NL, ZH (aussi AR, LV). Repère les noms rares."
   },
   "nerDownload": {
     "message": "Télécharger le modèle ($p1$)",

@@ -51,6 +51,19 @@ Names use two layers: a fast built-in English lexicon, and an optional on-device
 
 ---
 
+## Languages
+
+| What | Coverage |
+|---|---|
+| Emails, phones, cards, IBANs, national IDs, secrets | Any language (pattern based; phone numbers are matched by region) |
+| Names, built-in | Common first names in English, French, German, Italian, Spanish, Portuguese, Dutch. Not Russian, Japanese or Chinese. |
+| Names, with the optional model | English, French, German, Spanish, Italian, Portuguese, Dutch, Chinese (also Arabic, Latvian). Catches unusual surnames. |
+| Interface | English, French, German |
+
+The same table is in the extension's Settings page.
+
+---
+
 ## Supported sites
 
 Verified on the live site:
@@ -98,7 +111,3 @@ bun run zip            # package for store submission (zip:firefox, zip:edge, zi
 Architecture, invariants and the checklist for adding a site are in [CLAUDE.md](CLAUDE.md).
 
 ---
-
-## Optional: enhanced mode with pii-airlock
-
-If you run the [pii-airlock proxy](../pii-airlock/) locally, the extension can route detection through Presidio + spaCy for higher recall. Normal users never need it.
