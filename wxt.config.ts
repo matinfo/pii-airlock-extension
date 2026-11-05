@@ -62,7 +62,6 @@ export default defineConfig({
     name: '__MSG_extName__',
     description: '__MSG_extDesc__',
     default_locale: 'en',
-    author: 'Mathieu Meylan',
     homepage_url: 'https://github.com/matinfo/pii-airlock-extension',
     // 'wasm-unsafe-eval' lets the packaged ORT runtime compile its .wasm. No
     // 'unsafe-eval', no remote script sources.
