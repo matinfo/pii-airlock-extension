@@ -1,7 +1,6 @@
 /**
- * Renders the toolbar icon variants with a status mark at the top right:
- * on (green dot) and warn (orange diamond; distinct shape). Off has no mark:
- * the plain icon is used. Output is committed (public/icon-state/),
+ * Renders the toolbar icon variants by recolouring the shield itself:
+ * on (green) and warn (orange). Off uses the plain blue icon. Output is committed (public/icon-state/),
  * so builds stay reproducible. Run: bun scripts/gen-state-icons.ts
  */
 import { chromium } from '@playwright/test';
@@ -24,18 +23,9 @@ for (const size of SIZES) {
       const img = new Image();
       img.src = src;
       await img.decode();
+      // Recolour the shield itself (the grey lock is unaffected by hue shifts).
+      g.filter = state === 'on' ? 'hue-rotate(-80deg) saturate(1.1)' : 'hue-rotate(165deg) saturate(1.3) brightness(1.05)';
       g.drawImage(img, 0, 0, size, size);
-      const r = size * 0.22; // mark radius
-      const m = state === 'warn' ? r * 1.2 : r; // keep mark inside the canvas
-      const cx = size - m;
-      const cy = m;
-      const path = () => {
-        g.beginPath();
-        if (state === 'warn') { g.moveTo(cx, cy - r * 1.2); g.lineTo(cx + r * 1.2, cy); g.lineTo(cx, cy + r * 1.2); g.lineTo(cx - r * 1.2, cy); g.closePath(); }
-        else g.arc(cx, cy, r, 0, Math.PI * 2);
-      };
-      g.fillStyle = state === 'on' ? '#16a34a' : '#f59e0b';
-      path(); g.fill();
     }, { src, size, state });
     await page.locator('#c').screenshot({ path: `public/icon-state/${state}-${size}.png`, omitBackground: true });
   }
