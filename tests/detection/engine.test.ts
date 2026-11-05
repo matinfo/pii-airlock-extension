@@ -31,40 +31,40 @@ describe('analyze: clean text', () => {
 
 // ── high-risk: strict mode (default) ─────────────────────────────────────────
 
-describe('analyze: high-risk PII (strict)', () => {
-  it('blocks on email', async () => {
+describe('analyze: high-risk PII (auto mode)', () => {
+  it('auto-scrubs email', async () => {
     const r = await analyze('my email is alice@example.com', { skipNlp: true });
-    expect(r.decision).toBe('block');
+    expect(r.decision).toBe('auto_scrub');
     expect(r.topTier).toBe('high');
     expect(r.detections.some((d) => d.entityType === 'EMAIL_ADDRESS')).toBe(true);
   });
 
-  it('blocks on phone number', async () => {
+  it('auto-scrubs phone number', async () => {
     const r = await analyze('call me at (555) 867-5309', { skipNlp: true });
-    expect(r.decision).toBe('block');
+    expect(r.decision).toBe('auto_scrub');
     expect(r.topTier).toBe('high');
   });
 
-  it('blocks on valid credit card', async () => {
+  it('auto-scrubs valid credit card', async () => {
     const r = await analyze('charge 4111 1111 1111 1111', { skipNlp: true });
-    expect(r.decision).toBe('block');
+    expect(r.decision).toBe('auto_scrub');
     expect(r.topTier).toBe('high');
   });
 
-  it('blocks on SSN', async () => {
+  it('auto-scrubs SSN', async () => {
     const r = await analyze('my ssn: 123-45-6789', { skipNlp: true });
-    expect(r.decision).toBe('block');
+    expect(r.decision).toBe('auto_scrub');
   });
 
-  it('blocks on secret key', async () => {
+  it('auto-scrubs secret key', async () => {
     const r = await analyze('Authorization: Bearer eyJhbGciOiJIUzI1NiJ9.payload.sig', { skipNlp: true });
-    expect(r.decision).toBe('block');
+    expect(r.decision).toBe('auto_scrub');
     expect(r.detections.some((d) => d.entityType === 'SECRET_KEY')).toBe(true);
   });
 
-  it('blocks on IP address', async () => {
+  it('auto-scrubs IP address', async () => {
     const r = await analyze('connect to 8.8.8.8', { skipNlp: true });
-    expect(r.decision).toBe('block');
+    expect(r.decision).toBe('auto_scrub');
     expect(r.topTier).toBe('high');
   });
 });
@@ -84,9 +84,9 @@ describe('analyze: high-risk PII (permissive)', () => {
 // ── mixed tiers ───────────────────────────────────────────────────────────────
 
 describe('analyze: most restrictive decision wins', () => {
-  it('email + DOB → block (email wins)', async () => {
+  it('email + DOB → auto_scrub (email wins)', async () => {
     const r = await analyze('email alice@x.com born DOB: 01/15/1985', { skipNlp: true });
-    expect(r.decision).toBe('block');
+    expect(r.decision).toBe('auto_scrub');
   });
 });
 

@@ -12,6 +12,7 @@ import { detectNlp } from './nlp';
 import { detectNerRemote } from './ner-client';
 import { detectLanguage } from './lang';
 import { getDecision, tierOf } from '../policy';
+import { denyHits, dropAllowed } from '../lists';
 
 // ---------------------------------------------------------------------------
 // Overlap deduplication
@@ -66,7 +67,9 @@ export async function analyze(
         : detectNerRemote(text, lang),
     ]);
 
-    const all = dedupeOverlaps([...regexHits, ...nlpHits, ...ner.detections]);
+    const all = dropAllowed(
+      dedupeOverlaps([...denyHits(text), ...regexHits, ...nlpHits, ...ner.detections]),
+    );
     const topTier = all.length > 0
       ? (all.map((d) => tierOf(d.entityType)).sort((a, b) =>
           tierRank(a) - tierRank(b),

@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach } from 'bun:test';
-import { tierOf, getDecision, applySettings, DEFAULT_SETTINGS } from '../lib/policy';
+import { tierOf, getDecision, applySettings, currentSettings, isActive, DEFAULT_SETTINGS } from '../lib/policy';
 
 // Reset to defaults before each test to avoid cross-test pollution
 beforeEach(() => applySettings(DEFAULT_SETTINGS));
@@ -28,89 +28,78 @@ describe('tierOf', () => {
   });
 });
 
-// ── getDecision (strict mode — default) ──────────────────────────────────────
+// ── getDecision ───────────────────────────────────────────────────────────────
 
-describe('getDecision — strict mode (default)', () => {
-  const makeDetection = (entityType: string) => ({
-    entityType, start: 0, end: 5, score: 0.9, value: 'x', source: 'regex' as const,
-  });
+const det = (entityType: string) => ({
+  entityType, start: 0, end: 5, score: 0.9, value: 'x', source: 'regex' as const,
+});
 
-  it('returns allow when no detections', () => {
+describe('getDecision — auto mode (default)', () => {
+  it('allow when nothing detected', () => {
     expect(getDecision([])).toBe('allow');
   });
 
-  it('returns block for high-risk', () => {
-    expect(getDecision([makeDetection('EMAIL_ADDRESS')])).toBe('block');
-    expect(getDecision([makeDetection('CREDIT_CARD')])).toBe('block');
+  it('structured data, names and DOB are scrubbed without asking', () => {
+    for (const t of ['EMAIL_ADDRESS', 'CREDIT_CARD', 'SECRET_KEY', 'PERSON', 'DATE_OF_BIRTH', 'FR_NIR']) {
+      expect(getDecision([det(t)])).toBe('auto_scrub');
+    }
   });
 
-  it('returns auto_scrub for medium-risk', () => {
-    expect(getDecision([makeDetection('PERSON')])).toBe('auto_scrub');
+  it('LOCATION, ORG and private IPs are notify-only (too common in prose)', () => {
+    for (const t of ['LOCATION', 'ORG', 'IP_ADDRESS_PRIVATE']) {
+      expect(getDecision([det(t)])).toBe('notify');
+    }
   });
 
-  it('LOCATION and ORG are notify-only by default (too common in prose)', () => {
-    expect(getDecision([makeDetection('LOCATION')])).toBe('notify');
-    expect(getDecision([makeDetection('ORG')])).toBe('notify');
-  });
-
-  it('returns warn for low-risk', () => {
-    expect(getDecision([makeDetection('DATE_OF_BIRTH')])).toBe('warn');
-  });
-
-  it('picks most restrictive when mixed tiers present', () => {
-    // high + low → block (most restrictive)
-    expect(getDecision([makeDetection('EMAIL_ADDRESS'), makeDetection('DATE_OF_BIRTH')])).toBe('block');
-    // medium + low → auto_scrub
-    expect(getDecision([makeDetection('PERSON'), makeDetection('DATE_OF_BIRTH')])).toBe('auto_scrub');
+  it('most restrictive wins', () => {
+    expect(getDecision([det('LOCATION'), det('EMAIL_ADDRESS')])).toBe('auto_scrub');
   });
 });
 
-// ── getDecision (permissive mode) ─────────────────────────────────────────────
-
-describe('getDecision — permissive mode', () => {
-  const makeDetection = (entityType: string) => ({
-    entityType, start: 0, end: 5, score: 0.9, value: 'x', source: 'regex' as const,
+describe('modes', () => {
+  it('review: scrub-set becomes an ask, notify-only stays notify', () => {
+    applySettings({ mode: 'review' });
+    expect(getDecision([det('EMAIL_ADDRESS')])).toBe('warn');
+    expect(getDecision([det('LOCATION')])).toBe('notify');
   });
 
-  beforeEach(() => applySettings({ mode: 'permissive' }));
-
-  it('returns auto_scrub for high-risk', () => {
-    expect(getDecision([makeDetection('EMAIL_ADDRESS')])).toBe('auto_scrub');
+  it('off: everything allowed, isActive false', () => {
+    applySettings({ mode: 'off' });
+    expect(getDecision([det('EMAIL_ADDRESS'), det('PERSON')])).toBe('allow');
+    expect(isActive()).toBe(false);
   });
 
-  it('returns warn for medium-risk', () => {
-    expect(getDecision([makeDetection('PERSON')])).toBe('warn');
+  it('legacy strict/permissive values map to auto', () => {
+    applySettings({ mode: 'strict' });
+    expect(currentSettings().mode).toBe('auto');
+    applySettings({ mode: 'permissive' });
+    expect(currentSettings().mode).toBe('auto');
   });
 
-  it('returns notify for low-risk', () => {
-    expect(getDecision([makeDetection('DATE_OF_BIRTH')])).toBe('notify');
+  it('site off and pause disable protection, then it resumes', () => {
+    applySettings({ siteOff: true });
+    expect(isActive()).toBe(false);
+    applySettings({ siteOff: false, pausedUntil: 1000 });
+    expect(isActive(999)).toBe(false);
+    expect(isActive(1000)).toBe(true);
   });
 });
-
-// ── overrides ─────────────────────────────────────────────────────────────────
 
 describe('per-entity overrides', () => {
-  const makeDetection = (entityType: string) => ({
-    entityType, start: 0, end: 5, score: 0.9, value: 'x', source: 'regex' as const,
-  });
-
-  it('override takes precedence over matrix', () => {
+  it('override beats the mode', () => {
     applySettings({ overrides: { EMAIL_ADDRESS: 'warn' } });
-    // Normally strict → block, but override says warn
-    expect(getDecision([makeDetection('EMAIL_ADDRESS')])).toBe('warn');
-  });
-
-  it('override for one type does not affect other types', () => {
+    expect(getDecision([det('EMAIL_ADDRESS')])).toBe('warn');
     applySettings({ overrides: { EMAIL_ADDRESS: 'allow' } });
-    // PHONE_NUMBER still follows matrix (block in strict)
-    expect(getDecision([makeDetection('PHONE_NUMBER')])).toBe('block');
+    expect(getDecision([det('EMAIL_ADDRESS')])).toBe('allow');
   });
 
-  it('most restrictive wins even with overrides', () => {
-    // EMAIL overridden to 'warn', PERSON natural 'auto_scrub' → auto_scrub wins
-    applySettings({ overrides: { EMAIL_ADDRESS: 'warn' } });
-    expect(
-      getDecision([makeDetection('EMAIL_ADDRESS'), makeDetection('PERSON')])
-    ).toBe('auto_scrub');
+  it('override for one type does not affect others', () => {
+    applySettings({ overrides: { EMAIL_ADDRESS: 'allow' } });
+    expect(getDecision([det('PHONE_NUMBER')])).toBe('auto_scrub');
+  });
+
+  it('a notify-only type can be forced to scrub', () => {
+    applySettings({ overrides: { LOCATION: 'auto_scrub' } });
+    expect(getDecision([det('LOCATION')])).toBe('auto_scrub');
   });
 });
