@@ -265,7 +265,7 @@ const RULES: Rule[] = [
   { entity: 'CRYPTO', re: /\b0x[a-fA-F0-9]{40}\b/gd, score: 0.9 },
 
   // --- secrets (real formats first; generic assignment last) ----------------------
-  { entity: 'SECRET_KEY', re: /-----BEGIN [A-Z ]*PRIVATE KEY-----[\s\S]*?-----END [A-Z ]*PRIVATE KEY-----/gd, score: 1 },
+  { entity: 'SECRET_KEY', re: /-----BEGIN [A-Z ]*PRIVATE KEY-----[\s\S]{0,16000}?-----END [A-Z ]*PRIVATE KEY-----/gd, score: 1 },
   { entity: 'SECRET_KEY', re: /\b(?:AKIA|ASIA)[0-9A-Z]{16}\b/gd, score: 1 },
   { entity: 'SECRET_KEY', re: /\b(?:gh[pousr]_[A-Za-z0-9]{36,}|github_pat_\w{40,})/gd, score: 1 },
   { entity: 'SECRET_KEY', re: /\bglpat-[A-Za-z0-9_\-]{20,}/gd, score: 1 },
@@ -276,7 +276,9 @@ const RULES: Rule[] = [
   { entity: 'SECRET_KEY', re: /\beyJ[\w-]{10,}\.eyJ[\w-]{10,}\.[\w-]{10,}/gd, score: 0.95 },
   { entity: 'SECRET_KEY', re: /\bBearer\s+([A-Za-z0-9._~+/=-]{16,})/gd, score: 0.9, group: 1 },
   // Password in a URL: scheme://user:PASSWORD@host
-  { entity: 'SECRET_KEY', re: /[a-z][a-z0-9+.\-]*:\/\/[^/\s:@]+:([^/\s@]{3,})@/gid, score: 0.97, group: 1 },
+  // Anchored at the start of the scheme and length-bounded: otherwise a long run of
+  // letters is re-scanned from every position (quadratic on pasted blobs).
+  { entity: 'SECRET_KEY', re: /(?<![a-z0-9+.\-])[a-z][a-z0-9+.\-]{0,31}:\/\/[^/\s:@]+:([^/\s@]{3,})@/gid, score: 0.97, group: 1 },
   // key = value / key: value. Only the value is reported, only if plausible.
   // "token limit" or "secret santa" have no assignment, so never match.
   {

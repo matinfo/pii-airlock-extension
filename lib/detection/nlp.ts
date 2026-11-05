@@ -19,6 +19,23 @@ import { NAME_PAIR_RE, TITLE_NAME_RE, isFirstName } from './names';
  */
 const NON_LATIN_LANGS = new Set(['ru', 'ja', 'zh']);
 
+/** compromise slows super-linearly on long input: tag it in bounded windows. */
+const CHUNK = 6000;
+function chunks(text: string): string[] {
+  const out: string[] = [];
+  for (let i = 0; i < text.length; ) {
+    let end = Math.min(text.length, i + CHUNK);
+    if (end < text.length) {
+      // Cut at whitespace so a name is not split across two windows.
+      const ws = text.slice(i + CHUNK / 2, end).search(/\s\S*$/);
+      if (ws >= 0) end = i + CHUNK / 2 + ws + 1;
+    }
+    out.push(text.slice(i, end));
+    i = end;
+  }
+  return out;
+}
+
 /**
  * True if `term`'s first letter is uppercase. Person/location/org names are
  * proper nouns and always capitalised; this rejects compromise mis-tags of
@@ -38,8 +55,10 @@ export async function detectNlp(text: string, lang: string): Promise<Detection[]
   if (!text.trim()) return [];
 
   try {
-    const doc = nlp(text);
     const results: Detection[] = [];
+    // One scan of the full text per DISTINCT (type, term): a name repeated 1000
+    // times must not cost 1000 scans.
+    const seenTerms = new Set<string>();
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     function addMatches(view: any, entityType: string, score: number, requireUppercase: boolean) {
@@ -53,6 +72,8 @@ export async function detectNlp(text: string, lang: string): Promise<Detection[]
         // PERSON is left ungated — compromise's people tagger is conservative,
         // and lowercase first names ("marie") are still real PII we must catch.
         if (requireUppercase && !startsUppercase(term)) return;
+        if (seenTerms.has(`${entityType}|${term}`)) return;
+        seenTerms.add(`${entityType}|${term}`);
         // Find ALL occurrences, on word boundaries: indexOf would also hit the
         // term inside other words ("Al" in "Alpha") and corrupt them on scrub.
         const re = new RegExp(
@@ -79,9 +100,12 @@ export async function detectNlp(text: string, lang: string): Promise<Detection[]
       });
     }
 
-    addMatches(doc.people(), 'PERSON', 0.75, false);
-    addMatches(doc.places(), 'LOCATION', 0.65, true);
-    addMatches(doc.organizations(), 'ORG', 0.65, true);
+    for (const part of chunks(text)) {
+      const doc = nlp(part);
+      addMatches(doc.people(), 'PERSON', 0.75, false);
+      addMatches(doc.places(), 'LOCATION', 0.65, true);
+      addMatches(doc.organizations(), 'ORG', 0.65, true);
+    }
 
     // "Jean Dupont": compromise's people tagger misses names outside its
     // lexicon. A listed first name followed by capitalised word(s) is a person.
