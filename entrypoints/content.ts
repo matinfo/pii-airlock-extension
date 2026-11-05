@@ -1,6 +1,6 @@
 import { resolveAdapter } from '../lib/adapters';
 import { SendGuard } from '../lib/intercept';
-import { applySettings, currentSettings } from '../lib/policy';
+import { applySettings, currentSettings, isActive } from '../lib/policy';
 import { setLists, type Lists } from '../lib/lists';
 import { setNerTransport, warmNer } from '../lib/detection/ner-client';
 import { NER_DETECT, type NerDetectResponse } from '../lib/detection/ner-messages';
@@ -61,7 +61,7 @@ export default defineContentScript({
       });
       setLists(local.lists as Partial<Lists> | undefined);
     };
-    void loadSettings();
+    const loadingSettings = loadSettings();
 
     const adapter = resolveAdapter();
 
@@ -106,22 +106,29 @@ export default defineContentScript({
 
     // Health: does this page actually have a composer we can protect? A broken
     // selector otherwise fails silently while the popup claims "Active".
-    let lastHealth: boolean | null = null;
-    const checkHealth = () => {
-      const ok = adapter.findComposer() !== null;
-      if (ok === lastHealth) return;
-      lastHealth = ok;
-      browser.runtime.sendMessage({ type: MSG.HEALTH, ok }).catch(() => {});
+    // State drives the toolbar icon: on = protecting, warn = enabled but no
+    // composer found (NOT protecting), off = switched off / paused.
+    let lastState: string | null = null;
+    let settled = false; // false during the SPA mount grace period
+    const reportState = () => {
+      const found = adapter.findComposer() !== null;
+      if (!found && !settled && isActive()) return; // may still be mounting
+      const state = !isActive() ? 'off' : found ? 'on' : 'warn';
+      if (state === lastState) return;
+      lastState = state;
+      browser.runtime.sendMessage({ type: MSG.HEALTH, state }).catch(() => {});
     };
     // Grace period for the SPA to mount; then a cheap periodic check
-    // (a querySelector every few seconds, no MutationObserver churn).
-    setTimeout(checkHealth, 4000);
-    setInterval(checkHealth, 5000);
+    // (a querySelector every few seconds, no MutationObserver churn). The
+    // periodic tick also catches a timed pause expiring.
+    setTimeout(() => void loadingSettings.then(reportState), 1500);
+    setTimeout(() => { settled = true; reportState(); }, 4000);
+    setInterval(reportState, 5000);
 
     // Propagate changes from the popup / options page in real time.
     browser.storage.onChanged.addListener((changes, area) => {
-      if (area === 'sync' && (changes.mode || changes.overrides || changes.sitesOff || changes.confirmAfterSend)) void loadSettings();
-      if (area === 'local' && (changes.pausedUntil || changes.lists)) void loadSettings();
+      if (area === 'sync' && (changes.mode || changes.overrides || changes.sitesOff || changes.confirmAfterSend)) void loadSettings().then(reportState);
+      if (area === 'local' && (changes.pausedUntil || changes.lists)) void loadSettings().then(reportState);
     });
 
     browser.runtime.onMessage.addListener((msg, _sender, sendResponse) => {

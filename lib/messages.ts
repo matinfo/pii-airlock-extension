@@ -2,7 +2,7 @@
 export const MSG = {
   /** content → background: add `count` to the lifetime scrub counter. */
   SCRUBBED: 'PII_SCRUBBED',
-  /** content → background: composer found / lost on this page. */
+  /** content → background: protection state of this page ('on' | 'warn' | 'off'). */
   HEALTH: 'PII_HEALTH',
   /** popup → content: report protection status of this tab. */
   STATUS: 'PII_STATUS',

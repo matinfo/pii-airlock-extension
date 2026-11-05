@@ -32,6 +32,7 @@ button:focus-visible, input:focus-visible + *, .seg label:has(input:focus-visibl
 header { display: flex; align-items: center; justify-content: space-between; }
 .brand { display: inline-flex; align-items: center; gap: 6px; font-weight: 600; font-size: 14px; }
 .link { background: none; border: 0; border-radius: 6px; padding: 4px 6px; color: var(--muted); font-size: 12px; }
+.icon-btn { display: inline-flex; align-items: center; padding: 5px; cursor: pointer; }
 .link:hover { color: var(--fg); background: var(--hover); }
 
 .status { display: flex; gap: 10px; align-items: flex-start; padding: 10px 12px; border: 1px solid var(--border); border-radius: 10px; }
