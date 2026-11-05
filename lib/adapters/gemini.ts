@@ -16,7 +16,10 @@ export const geminiAdapter: ChatAdapter = {
   },
 
   findSendButton(): HTMLElement | null {
+    // aria-label is localised ("Envoyer un message", "Nachricht senden"…), so the
+    // arrow icon is the locale-independent anchor. Mic/stop use other icons.
     return (
+      document.querySelector<HTMLElement>('button:has([data-mat-icon-name="arrow_upward"])') ??
       document.querySelector<HTMLElement>('button[aria-label="Send message"]') ??
       document.querySelector<HTMLElement>('button.send-button') ??
       document.querySelector<HTMLElement>('button[data-mat-icon-name="send"]') ??
