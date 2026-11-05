@@ -18,7 +18,7 @@ export default defineContentScript({
     '*://perplexity.ai/*',
     '*://poe.com/*',
     '*://character.ai/*',
-    '*://mistral.ai/*',
+    '*://*.mistral.ai/*',
     '*://huggingface.co/*',
     '*://you.com/*',
   ],

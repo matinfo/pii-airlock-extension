@@ -68,7 +68,7 @@ export default defineConfig({
       'https://perplexity.ai/*',
       'https://poe.com/*',
       'https://character.ai/*',
-      'https://mistral.ai/*',
+      'https://*.mistral.ai/*',
       'https://huggingface.co/*',
       'https://you.com/*',
     ],
