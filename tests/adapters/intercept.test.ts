@@ -420,3 +420,28 @@ test('a live scan pending at send time does not bring the chip back after send',
     shield.render = orig;
   }
 });
+
+test('"Confirm after sending" off: the message still goes out scrubbed, with no toast', async () => {
+  const { shield } = await import('../../lib/ui/components');
+  const orig = shield.toast.bind(shield);
+  let toasts = 0;
+  shield.toast = (...a) => { toasts++; return orig(...a); };
+  try {
+    for (const [confirmAfterSend, expected] of [[true, 1], [false, 0]] as const) {
+      toasts = 0;
+      applySettings({ mode: 'auto', overrides: {}, siteOff: false, pausedUntil: 0, confirmAfterSend });
+      document.body.innerHTML = '';
+      const f = makeFake('write to jane@example.com');
+      const g = guard(f.adapter);
+      pressEnter(f.composer);
+      await settle();
+      expect(f.sends.length).toBe(1);
+      expect(f.composer.textContent).not.toContain('jane@example.com');
+      expect(toasts).toBe(expected);
+      g.destroy();
+    }
+  } finally {
+    shield.toast = orig;
+    applySettings({ confirmAfterSend: true });
+  }
+});

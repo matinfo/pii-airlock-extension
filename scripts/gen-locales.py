@@ -94,6 +94,8 @@ T = {
  'optAdd': ('Add', 'Ajouter', 'Hinzufügen'),
  'optAsKind': ('Replace it as', 'Remplacer comme', 'Ersetzen als'),
  'optInvalid': ('Needs at least 2 characters, including a letter or a digit.', 'Au moins 2 caractères, dont une lettre ou un chiffre.', 'Mindestens 2 Zeichen, mit einem Buchstaben oder einer Ziffer.'),
+ 'optConfirm': ('Confirm after sending', 'Confirmer après l’envoi', 'Nach dem Senden bestätigen'),
+ 'optConfirmHint': ('Show a short note when a message was sent with replacements.', 'Afficher une courte note quand un message a été envoyé avec des remplacements.', 'Kurzen Hinweis zeigen, wenn eine Nachricht mit Ersetzungen gesendet wurde.'),
  'optEmpty': ('Nothing here yet.', 'Rien pour l’instant.', 'Noch nichts vorhanden.'),
  'optRemove': ('Remove', 'Retirer', 'Entfernen'),
  'optReset': ('Reset settings', 'Réinitialiser les réglages', 'Einstellungen zurücksetzen'),

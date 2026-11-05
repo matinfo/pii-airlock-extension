@@ -263,6 +263,12 @@
   "optInvalid": {
     "message": "Needs at least 2 characters, including a letter or a digit."
   },
+  "optConfirm": {
+    "message": "Confirm after sending"
+  },
+  "optConfirmHint": {
+    "message": "Show a short note when a message was sent with replacements."
+  },
   "optEmpty": {
     "message": "Nothing here yet."
   },

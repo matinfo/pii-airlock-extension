@@ -30,10 +30,12 @@ function App() {
   const [mode, setMode] = useState<Mode>("auto");
   const [overrides, setOverrides] = useState<Record<string, Decision>>({});
   const [lists, setLists] = useState<Lists>({ allow: [], deny: [] });
+  const [confirm, setConfirm] = useState(true);
   const [saved, setSaved] = useState(false);
 
   useEffect(() => {
-    browser.storage.sync.get({ mode: "auto", overrides: {} }).then((s) => {
+    browser.storage.sync.get({ mode: "auto", overrides: {}, confirmAfterSend: true }).then((s) => {
+      setConfirm(s.confirmAfterSend !== false);
       const m = s.mode as string;
       setMode(m === "review" || m === "off" ? m : "auto");
       setOverrides(s.overrides as Record<string, Decision>);
@@ -50,7 +52,7 @@ function App() {
     setSaved(true);
     setTimeout(() => setSaved(false), 1800);
   };
-  const saveSync = (patch: { mode?: Mode; overrides?: Record<string, Decision> }) =>
+  const saveSync = (patch: { mode?: Mode; overrides?: Record<string, Decision>; confirmAfterSend?: boolean }) =>
     browser.storage.sync.set(patch).then(flash);
 
   const chooseMode = (m: Mode) => { setMode(m); void saveSync({ mode: m }); };
@@ -81,6 +83,13 @@ function App() {
             ))}
           </div>
           <p className="hint">{t(`mode${cap(mode)}Hint`)}</p>
+          <label className="check">
+            <input
+              type="checkbox" checked={confirm}
+              onChange={(e) => { setConfirm(e.target.checked); void saveSync({ confirmAfterSend: e.target.checked }); }}
+            />
+            <span>{t("optConfirm")}<small>{t("optConfirmHint")}</small></span>
+          </label>
         </div>
       </section>
 

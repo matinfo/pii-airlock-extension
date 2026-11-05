@@ -50,12 +50,13 @@ export default defineContentScript({
     // local (lists hold the user's own sensitive values: never sync them).
     const host = location.hostname;
     const loadSettings = async () => {
-      const sync = await browser.storage.sync.get({ mode: 'auto', overrides: {}, sitesOff: [] });
+      const sync = await browser.storage.sync.get({ mode: 'auto', overrides: {}, sitesOff: [], confirmAfterSend: true });
       const local = await browser.storage.local.get({ pausedUntil: 0, lists: undefined });
       applySettings({
         mode: sync.mode as string,
         overrides: sync.overrides as Record<string, never>,
         siteOff: (sync.sitesOff as string[]).includes(host),
+        confirmAfterSend: sync.confirmAfterSend !== false,
         pausedUntil: local.pausedUntil as number,
       });
       setLists(local.lists as Partial<Lists> | undefined);
@@ -119,7 +120,7 @@ export default defineContentScript({
 
     // Propagate changes from the popup / options page in real time.
     browser.storage.onChanged.addListener((changes, area) => {
-      if (area === 'sync' && (changes.mode || changes.overrides || changes.sitesOff)) void loadSettings();
+      if (area === 'sync' && (changes.mode || changes.overrides || changes.sitesOff || changes.confirmAfterSend)) void loadSettings();
       if (area === 'local' && (changes.pausedUntil || changes.lists)) void loadSettings();
     });
 

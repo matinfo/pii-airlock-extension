@@ -263,6 +263,12 @@
   "optInvalid": {
     "message": "Au moins 2 caractères, dont une lettre ou un chiffre."
   },
+  "optConfirm": {
+    "message": "Confirmer après l’envoi"
+  },
+  "optConfirmHint": {
+    "message": "Afficher une courte note quand un message a été envoyé avec des remplacements."
+  },
   "optEmpty": {
     "message": "Rien pour l’instant."
   },

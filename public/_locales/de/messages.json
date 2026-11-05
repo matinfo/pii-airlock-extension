@@ -263,6 +263,12 @@
   "optInvalid": {
     "message": "Mindestens 2 Zeichen, mit einem Buchstaben oder einer Ziffer."
   },
+  "optConfirm": {
+    "message": "Nach dem Senden bestätigen"
+  },
+  "optConfirmHint": {
+    "message": "Kurzen Hinweis zeigen, wenn eine Nachricht mit Ersetzungen gesendet wurde."
+  },
   "optEmpty": {
     "message": "Noch nichts vorhanden."
   },

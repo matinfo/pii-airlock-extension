@@ -466,7 +466,8 @@ export class SendGuard {
     const items = scrubbed
       .filter((d) => !seen.has(this.keyOf(d)) && seen.add(this.keyOf(d)))
       .map((d) => this.toItem(d, this.mapping.tokenFor(d.entityType, d.value)));
-    shield.toast(items, this.nerNote);
+    // The note after a send is optional (Settings); an explicit "Replace now" always confirms.
+    if (!clear || currentSettings().confirmAfterSend) shield.toast(items, this.nerNote);
     if (clear) {
       // Drop any scan still pending or in flight: it describes the sent message.
       clearTimeout(this.scanTimer);

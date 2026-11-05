@@ -75,6 +75,8 @@ export interface PolicySettings {
   siteOff: boolean;
   /** Epoch ms until which protection is paused (0 = not paused). */
   pausedUntil: number;
+  /** Show the short "N items replaced" note after a message is sent. */
+  confirmAfterSend: boolean;
 }
 
 export const DEFAULT_SETTINGS: PolicySettings = {
@@ -82,6 +84,7 @@ export const DEFAULT_SETTINGS: PolicySettings = {
   overrides: {},
   siteOff: false,
   pausedUntil: 0,
+  confirmAfterSend: true,
 };
 
 let _settings: PolicySettings = DEFAULT_SETTINGS;
