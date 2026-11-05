@@ -52,28 +52,33 @@ export default function NerSection() {
     <section>
       <h2>{t("nerTitle")}</h2>
       <p className="desc">{t("nerDesc")}</p>
-      {state.kind === "off" && (
-        <button className="btn primary" onClick={install}>{t("nerDownload", size)}</button>
-      )}
-      {state.kind === "downloading" && (
-        <div role="status" className="ner-row">
-          <progress value={state.loaded} max={NER_TOTAL_BYTES} aria-label={t("nerTitle")} />
-          <span>{mb(state.loaded)} / {size}</span>
-          <button className="btn" onClick={() => abort.current?.abort()}>{t("nerCancel")}</button>
-        </div>
-      )}
-      {state.kind === "on" && (
-        <div role="status" className="ner-row">
-          <span>{t("nerInstalled", size)}</span>
-          <button className="btn" onClick={remove}>{t("nerRemove")}</button>
-        </div>
-      )}
-      {state.kind === "error" && (
-        <div role="alert" className="ner-row">
-          <span>{t("nerFailed", state.message)}</span>
-          <button className="btn" onClick={install}>{t("nerRetry")}</button>
-        </div>
-      )}
+      <div className="group pad">
+        {state.kind === "off" && (
+          <button className="btn primary" onClick={install}>{t("nerDownload", size)}</button>
+        )}
+        {state.kind === "downloading" && (
+          <div role="status" className="ner-row">
+            <progress value={state.loaded} max={NER_TOTAL_BYTES} aria-label={t("nerTitle")} />
+            <span className="num">{mb(state.loaded)} / {size}</span>
+            <button className="btn" onClick={() => abort.current?.abort()}>{t("nerCancel")}</button>
+          </div>
+        )}
+        {state.kind === "on" && (
+          <div role="status" className="ner-row">
+            <span className="dot ok" aria-hidden="true" />
+            <span className="grow">{t("nerInstalled", size)}</span>
+            <button className="btn" onClick={remove}>{t("nerRemove")}</button>
+          </div>
+        )}
+        {state.kind === "error" && (
+          <div role="alert" className="ner-row">
+            <span className="dot warn" aria-hidden="true" />
+            <span className="grow">{t("nerFailed", state.message)}</span>
+            <button className="btn" onClick={install}>{t("nerRetry")}</button>
+          </div>
+        )}
+        {state.kind === "checking" && <span className="empty">…</span>}
+      </div>
     </section>
   );
 }

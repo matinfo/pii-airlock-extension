@@ -62,20 +62,22 @@ function App() {
   return (
     <div className="options">
       <header>
-        <h1>{t("appName")} <span>{t("optTitle")}</span></h1>
-        <span className={`saved ${saved ? "show" : ""}`} role="status">{saved ? t("optSaved") : ""}</span>
+        <span className="brand"><Shield /> {t("appName")} <span className="sub">{t("optTitle")}</span></span>
+        <span className="saved" role="status">{saved ? t("optSaved") : ""}</span>
       </header>
 
       <section>
         <h2>{t("optMode")}</h2>
-        <div className="cards" role="radiogroup" aria-label={t("optMode")}>
-          {MODES.map((m) => (
-            <label key={m} className={`card ${mode === m ? "on" : ""}`}>
-              <input type="radio" name="mode" checked={mode === m} onChange={() => chooseMode(m)} />
-              <strong>{t(`mode${cap(m)}`)}</strong>
-              <span>{t(`mode${cap(m)}Hint`)}</span>
-            </label>
-          ))}
+        <div className="group pad">
+          <div className="seg" role="radiogroup" aria-label={t("optMode")}>
+            {MODES.map((m) => (
+              <label key={m} className={mode === m ? "on" : ""}>
+                <input type="radio" name="mode" checked={mode === m} onChange={() => chooseMode(m)} />
+                {t(`mode${cap(m)}`)}
+              </label>
+            ))}
+          </div>
+          <p className="hint">{t(`mode${cap(mode)}Hint`)}</p>
         </div>
       </section>
 
@@ -84,59 +86,49 @@ function App() {
       <section>
         <h2>{t("optEntities")}</h2>
         <p className="desc">{t("optEntitiesDesc")}</p>
-        <table>
-          <thead>
-            <tr><th>{t("colType")}</th><th>{t("colAction")}</th></tr>
-          </thead>
-          <tbody>
-            {ENTITY_TYPES.map((type) => {
-              const def = defaultDecisionFor(type, mode);
-              return (
-                <tr key={type}>
-                  <td>{entityLabel(type)}</td>
-                  <td>
-                    <select
-                      aria-label={entityLabel(type)}
-                      value={overrides[type] ?? ""}
-                      onChange={(e) => setOverride(type, e.target.value as Decision | "")}
-                    >
-                      <option value="">{t("actDefault")} · {t(actionKey(def))}</option>
-                      {ACTIONS.map((a) => <option key={a.value} value={a.value}>{t(a.key)}</option>)}
-                    </select>
-                  </td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
+        <ul className="group">
+          {ENTITY_TYPES.map((type) => {
+            const def = defaultDecisionFor(type, mode);
+            return (
+              <li key={type} className="row">
+                <label htmlFor={`e-${type}`}>{entityLabel(type)}</label>
+                <select
+                  id={`e-${type}`}
+                  value={overrides[type] ?? ""}
+                  onChange={(e) => setOverride(type, e.target.value as Decision | "")}
+                >
+                  <option value="">{t("actDefault")} · {t(actionKey(def))}</option>
+                  {ACTIONS.map((a) => <option key={a.value} value={a.value}>{t(a.key)}</option>)}
+                </select>
+              </li>
+            );
+          })}
+        </ul>
       </section>
 
       <section>
         <h2>{t("optLists")}</h2>
         <p className="desc">{t("optListsDesc")}</p>
-        <div className="two">
-          <ListBox
-            title={t("optAllowed")}
-            items={lists.allow}
-            onRemove={(i) => saveLists({ ...lists, allow: lists.allow.filter((_, j) => j !== i) })}
-          />
-          <ListBox
-            title={t("optAlways")}
-            items={lists.deny.map((d) => d.value)}
-            sub={lists.deny.map((d) => entityLabel(d.type))}
-            onRemove={(i) => saveLists({ ...lists, deny: lists.deny.filter((_, j) => j !== i) })}
-          />
-        </div>
+        <ListBox
+          title={t("optAllowed")}
+          items={lists.allow}
+          onRemove={(i) => saveLists({ ...lists, allow: lists.allow.filter((_, j) => j !== i) })}
+        />
+        <ListBox
+          title={t("optAlways")}
+          items={lists.deny.map((d) => d.value)}
+          sub={lists.deny.map((d) => entityLabel(d.type))}
+          onRemove={(i) => saveLists({ ...lists, deny: lists.deny.filter((_, j) => j !== i) })}
+        />
       </section>
 
-      <section className="reset">
-        <button className="btn" onClick={() => {
+      <footer>
+        <span>{t("optFooter")}</span>
+        <button className="link" onClick={() => {
           setMode("auto"); setOverrides({});
           void saveSync({ mode: "auto", overrides: {} });
         }}>{t("optReset")}</button>
-      </section>
-
-      <footer>{t("optFooter")}</footer>
+      </footer>
     </div>
   );
 }
@@ -146,11 +138,11 @@ function ListBox({ title, items, sub, onRemove }: { title: string; items: string
     <div className="listbox">
       <h3>{title}</h3>
       {items.length === 0 ? (
-        <p className="empty">{t("optEmpty")}</p>
+        <p className="empty group pad">{t("optEmpty")}</p>
       ) : (
-        <ul>
+        <ul className="group">
           {items.map((v, i) => (
-            <li key={`${v}-${i}`}>
+            <li key={`${v}-${i}`} className="row">
               <span className="v">{v}{sub?.[i] && <small>{sub[i]}</small>}</span>
               <button className="link" onClick={() => onRemove(i)} aria-label={`${t("optRemove")}: ${v}`}>{t("optRemove")}</button>
             </li>
@@ -158,6 +150,15 @@ function ListBox({ title, items, sub, onRemove }: { title: string; items: string
         </ul>
       )}
     </div>
+  );
+}
+
+function Shield() {
+  return (
+    <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <path d="M12 3 5 6v5.5c0 4.3 2.9 7.6 7 9.5 4.1-1.9 7-5.2 7-9.5V6l-7-3Z" />
+      <path d="m9 12 2 2 4-4" />
+    </svg>
   );
 }
 
