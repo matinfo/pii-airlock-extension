@@ -87,20 +87,26 @@ names. Scores PERSON ~0.9 > compromise 0.75 → wins the overlap dedupe.
   `browser.runtime.sendMessage` transport → `background.ts` dispatches to
   offscreen (`NER_DETECT` → `NER_DETECT_OFFSCREEN`, two types so the broadcast
   doesn't loop).
-- **No-network (invariant #3):** `configureNerEnv()` sets `allowRemoteModels=false`
-  AND pins `backends.onnx.wasm.wasmPaths` — transformers otherwise fetches model
-  AND the ORT WASM from a CDN. Model + WASM ship in `public/` (see below).
-- **Fail-open:** load/inference errors → `[]`; L1+L2 still run. NER also no-ops
-  until `configureNerEnv` is called (guards against any accidental remote load).
-- **Model assets are NOT committed.** Run `bun run fetch:ner` once before
-  building to populate `public/models/` (~107MB int8) + `public/wasm/`. Until
-  then Layer 3 silently no-ops.
-- **Bundle isolation:** MV3 background is `type: module` + the Firefox-direct
-  path is gated on `import.meta.env.MANIFEST_VERSION !== 2`, so transformers is
-  dead-code-eliminated from the Chrome/Edge `background.js` (~3.6KB — it only
-  forwards to offscreen). The transformers + ORT runtime (~63MB, mostly
-  base64-inlined WASM) lands only in: the Chrome **offscreen** chunk, and the
-  **Firefox MV2 background** (which hosts the model itself).
+- **Network (invariant #3, reworded):** your TEXT never leaves the device. The
+  model is never packaged: the user opts in (Options → "Better name detection"),
+  which downloads it ONCE from a pinned HF revision (`lib/ner-manifest.ts`),
+  SHA-256 verified, into the Cache API (`lib/ner-model.ts`). Inside the pipeline
+  `configureNerEnv()` serves files only from that store (`env.customCache`) and
+  `env.fetch` rejects, so a miss fails open instead of reaching out. The packaged
+  ORT runtime (`public/wasm/ort-wasm-simd-threaded.{mjs,wasm}`, ~14 MB raw /
+  3.7 MB gzipped) is pinned through `wasmPaths`; the build fails if it is
+  missing (`build:before` hook) and a Vite plugin drops ORT's own 27 MB copy.
+- **Fail-open:** load/inference errors → `[]`; L1+L2 still run. NER no-ops until
+  `configureNerEnv` is called AND the model is installed. Sends wait at most
+  `NER_BUDGET_MS` (400 ms) for it; `DetectionResult.nerTimedOut` records a skip.
+  The model is warmed on composer focus, not page load.
+- **Model output shape:** transformers.js returns per-wordpiece BIO tokens with
+  NO offsets. `mergeTokens` aligns them to the text with a cursor and bridges
+  O-tagged hyphens; `chunkText` windows long text. Tests replay captured real
+  output (`tests/fixtures/ner-real.ts`), not hand-made shapes.
+- **One host for both browsers:** `offscreen.html` hosts the model. Chrome uses
+  `chrome.offscreen`; Firefox MV2's background page embeds it in a hidden iframe.
+  Transformers therefore never lands in `background.js`.
 - **Expected build warning (Firefox only):** `[EMPTY_IMPORT_META] import.meta …
   iife`. transformers' `import.meta.url` self-location is neutered in the MV2
   iife background — harmless because `configureNerEnv` overrides both
@@ -148,7 +154,8 @@ bun run zip          # Package Chrome for store submission
 bun run zip:firefox  # Package Firefox (AMO)
 bun run zip:edge     # Package Edge (Edge Add-ons)
 bun run zip:all      # Package all three
-bun run fetch:ner    # Download NER model + WASM into public/ (run once, ~107MB)
+bun run fetch:ner    # Copy the ORT WASM runtime into public/wasm (build does it if missing)
+bun run fetch:ner --model  # + download the pinned model to .cache/ner-model (e2e only, never packaged)
 bun test             # Run test suite (bun built-in runner)
 bun run compile      # tsc --noEmit type check
 ```

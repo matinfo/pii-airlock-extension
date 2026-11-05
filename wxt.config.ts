@@ -26,6 +26,12 @@ export default defineConfig({
     },
     'build:manifestGenerated': (_wxt, manifest) => {
       if (manifest.options_ui) manifest.options_ui.open_in_tab = true;
+      // Firefox needs a stable add-on id (storage, AMO, fixed moz-extension UUID).
+      if (manifest.manifest_version === 2) {
+        (manifest as Record<string, unknown>).browser_specific_settings = {
+          gecko: { id: 'pii-airlock@matinfo.dev' },
+        };
+      }
       // 'offscreen' is an MV3-only permission (Chrome/Edge). Firefox MV2 hosts
       // the NER model in its persistent background page instead.
       if (manifest.manifest_version === 3) {

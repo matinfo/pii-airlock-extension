@@ -28,5 +28,9 @@ jobs:
       - uses: oven-sh/setup-bun@v2
       - run: bun install --frozen-lockfile
       - run: bunx playwright install --with-deps chromium
-      - run: bun run build
+      - uses: actions/cache@v4
+        with:
+          path: .cache/ner-model
+          key: ner-model-263e82c
+      - run: bun run fetch:ner --model
       - run: bun run e2e
