@@ -47,11 +47,11 @@ jobs:
       - name: Release gate
         env:
           TAG: ${{ github.ref_type == 'tag' && github.ref_name || '' }}
-        run: bun scripts/verify-release.ts $TAG
+        run: bun scripts/verify-release.ts ${TAG:+"$TAG"}
       - run: bun run zip:all
       - name: Checksums
         working-directory: .output
-        run: sha256sum *.zip | tee SHA256SUMS.txt
+        run: sha256sum -- *.zip | tee SHA256SUMS.txt
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: release-zips
@@ -100,8 +100,8 @@ jobs:
           CHROME_CLIENT_ID: ${{ secrets.CHROME_CLIENT_ID }}
           CHROME_CLIENT_SECRET: ${{ secrets.CHROME_CLIENT_SECRET }}
           CHROME_REFRESH_TOKEN: ${{ secrets.CHROME_REFRESH_TOKEN }}
-          DRY: ${{ github.event_name == 'workflow_dispatch' && inputs.dry_run && '--dry-run' || '' }}
-        run: bunx wxt submit $DRY --chrome-zip dist/*-chrome.zip
+          DRY_RUN: ${{ github.event_name == 'workflow_dispatch' && inputs.dry_run && 'true' || '' }}
+        run: bunx wxt submit ${DRY_RUN:+--dry-run} --chrome-zip dist/*-chrome.zip
 
   firefox:
     needs: package
@@ -118,13 +118,13 @@ jobs:
         with:
           name: release-zips
           path: dist
-      - name: Submit to AMO (sources zip required: bundled/minified code)
+      - name: Submit to AMO (sources zip required, code is bundled)
         env:
           FIREFOX_EXTENSION_ID: pii-airlock@matinfo.dev
           FIREFOX_JWT_ISSUER: ${{ secrets.FIREFOX_JWT_ISSUER }}
           FIREFOX_JWT_SECRET: ${{ secrets.FIREFOX_JWT_SECRET }}
-          DRY: ${{ github.event_name == 'workflow_dispatch' && inputs.dry_run && '--dry-run' || '' }}
-        run: bunx wxt submit $DRY --firefox-zip dist/*-firefox.zip --firefox-sources-zip dist/*-sources.zip
+          DRY_RUN: ${{ github.event_name == 'workflow_dispatch' && inputs.dry_run && 'true' || '' }}
+        run: bunx wxt submit ${DRY_RUN:+--dry-run} --firefox-zip dist/*-firefox.zip --firefox-sources-zip dist/*-sources.zip
 
   edge:
     needs: package
@@ -146,5 +146,5 @@ jobs:
           EDGE_PRODUCT_ID: ${{ secrets.EDGE_PRODUCT_ID }}
           EDGE_CLIENT_ID: ${{ secrets.EDGE_CLIENT_ID }}
           EDGE_API_KEY: ${{ secrets.EDGE_API_KEY }}
-          DRY: ${{ github.event_name == 'workflow_dispatch' && inputs.dry_run && '--dry-run' || '' }}
-        run: bunx wxt submit $DRY --edge-zip dist/*-edge.zip
+          DRY_RUN: ${{ github.event_name == 'workflow_dispatch' && inputs.dry_run && 'true' || '' }}
+        run: bunx wxt submit ${DRY_RUN:+--dry-run} --edge-zip dist/*-edge.zip
