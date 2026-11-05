@@ -61,7 +61,7 @@
     "message": "Replace now"
   },
   "rowAllow": {
-    "message": "Always allow"
+    "message": "Never replace"
   },
   "rowAlways": {
     "message": "Always replace"

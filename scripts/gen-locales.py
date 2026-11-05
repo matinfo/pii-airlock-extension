@@ -25,7 +25,7 @@ T = {
  'btnCancel': ('Cancel', 'Annuler', 'Abbrechen'),
  'btnReplaceSend': ('Replace and send', 'Remplacer et envoyer', 'Ersetzen und senden'),
  'btnReplaceNow': ('Replace now', 'Remplacer maintenant', 'Jetzt ersetzen'),
- 'rowAllow': ('Always allow', 'Toujours autoriser', 'Immer erlauben'),
+ 'rowAllow': ('Never replace', 'Ne jamais remplacer', 'Nie ersetzen'),
  'rowAlways': ('Always replace', 'Toujours remplacer', 'Immer ersetzen'),
  'rowDontReplace': ('Don’t replace again', 'Ne plus remplacer', 'Nicht mehr ersetzen'),
  'toastOne': ('1 item replaced', '1 élément remplacé', '1 Eintrag ersetzt'),
