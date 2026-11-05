@@ -1,4 +1,4 @@
-/** Adapter for perplexity.ai. */
+/** Adapter for perplexity.ai. The composer is a Lexical contenteditable. */
 
 import type { ChatAdapter } from './types';
 import { replaceContentEditable, queryInScope } from './dom';
@@ -8,6 +8,8 @@ export const perplexityAdapter: ChatAdapter = {
 
   findComposer(): HTMLElement | null {
     return (
+      document.querySelector<HTMLElement>('[data-lexical-editor="true"][contenteditable="true"]') ??
+      document.querySelector<HTMLElement>('[role="textbox"][contenteditable="true"]') ??
       document.querySelector<HTMLElement>('textarea[placeholder*="Ask" i]') ??
       document.querySelector<HTMLElement>('textarea[placeholder*="Search" i]') ??
       document.querySelector<HTMLElement>('textarea') ??
@@ -19,6 +21,7 @@ export const perplexityAdapter: ChatAdapter = {
     const c = composer ?? this.findComposer();
     return (
       queryInScope(c, 'button[aria-label*="Submit" i]') ??
+      queryInScope(c, 'button[data-testid*="submit" i]') ??
       queryInScope(c, 'button[type="submit"]') ??
       null
     );
