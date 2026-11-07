@@ -279,7 +279,7 @@ export class SendGuard {
   private anchor() {
     const composer = this.liveEditable?.isConnected ? this.liveEditable : this.adapter.findComposer();
     if (!composer) return null;
-    return { composer, sendButton: this.adapter.findSendButton(composer) };
+    return { composer, sendButton: this.adapter.findSendButton(composer), frame: this.adapter.findFrame?.(composer) ?? null };
   }
 
   private scheduleScan(editable: HTMLElement | null): void {
@@ -309,7 +309,10 @@ export class SendGuard {
     const seq = ++this.scanSeq;
     if (!isActive()) {
       this.pendingItems = 0; this.scanQueued = false;
-      shield.render({ items: [], notices: [], mode: 'auto', paused: currentSettings().mode !== 'off' && !currentSettings().siteOff });
+      const s = currentSettings();
+      const paused = s.mode !== 'off' && !s.siteOff;
+      shield.setProtection(paused ? 'paused' : null);
+      shield.render({ items: [], notices: [], mode: 'auto', paused });
       return;
     }
     const text = this.read(editable);
@@ -377,7 +380,15 @@ export class SendGuard {
       const text = this.read(ctx.editable);
       if (!text.trim()) { await this.send(ctx); return; }
 
-      const result = await this.analyze(text);
+      // A slow send-time check (names model) shows "Checking…" on the tab.
+      const checking = setTimeout(() => shield.setChecking(true), 150);
+      let result: DetectionResult;
+      try {
+        result = await this.analyze(text);
+      } finally {
+        clearTimeout(checking);
+        shield.setChecking(false);
+      }
       // Typing continued during analysis → this result describes old text.
       if (this.read(ctx.editable) !== text) continue;
 

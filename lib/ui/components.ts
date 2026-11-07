@@ -1,5 +1,5 @@
 /**
- * In-page UI: a chip docked to the composer, a review panel, a post-send toast
+ * In-page UI: a status tab on the composer's border, a review panel, a post-send toast
  * and a modal for real failures. Everything lives in a closed shadow root and
  * is built with textContent only (values are user data, never HTML). Colours,
  * font and radius are sampled from the host page (see theme.ts), so the UI
@@ -8,6 +8,7 @@
 
 import { t, entityLabel } from '../i18n';
 import { applyTheme, sampleTheme } from './theme';
+import { locateFrame } from './frame';
 
 /** Id of the shadow host; the send guard ignores events that originate here. */
 export const UI_HOST_ID = 'pii-airlock-ui';
@@ -24,6 +25,8 @@ export interface PanelItem {
 export interface Anchor {
   composer: HTMLElement;
   sendButton: HTMLElement | null;
+  /** Adapter override for the visible pill (see ChatAdapter.findFrame). */
+  frame?: HTMLElement | null;
 }
 
 export interface ShieldHandlers {
@@ -53,14 +56,27 @@ button:focus-visible, input:focus-visible { outline: 2px solid var(--accent); ou
 
 .float { position: fixed; pointer-events: auto; }
 
-.chip {
-  display: inline-flex; align-items: center; gap: 6px; height: 28px; padding: 0 10px 0 8px;
-  background: var(--surface); border: 1px solid var(--border); border-radius: 999px;
-  font-size: 12px; font-weight: 500; font-variant-numeric: tabular-nums;
+/* Status tab: attached to the top border of the composer pill, just after the
+   left corner curve. Inverts with the page (dark on light pages, light on dark
+   ones) so it reads as status, not as decoration. One element for every state:
+   protected, items to replace, noticed, checking, paused. */
+.tab {
+  display: inline-flex; align-items: center; gap: 5px; height: 22px; padding: 0 9px 0 6px;
+  background: var(--fg); color: var(--bg); border: 0; border-radius: 999px;
+  box-shadow: 0 0 0 2px var(--bg), 0 1px 3px rgb(0 0 0 / .18);
+  font-size: 11.5px; font-weight: 600; line-height: 1; white-space: nowrap; font-variant-numeric: tabular-nums;
+  cursor: default;
 }
-.chip:hover { background: var(--hover); }
-.chip.muted { color: var(--muted); }
-.chip svg { width: 15px; height: 15px; flex: none; }
+.tab.clickable { cursor: pointer; }
+.tab.clickable:hover { background: color-mix(in srgb, var(--fg) 85%, var(--bg)); }
+.tab svg { width: 13px; height: 13px; flex: none; stroke-width: 2.2; }
+.tab.muted { background: color-mix(in srgb, var(--fg) 12%, var(--bg)); color: var(--fg); box-shadow: 0 0 0 1px var(--border); }
+.tab.muted.clickable:hover { background: color-mix(in srgb, var(--fg) 18%, var(--bg)); }
+.tab.compact { padding: 0 5px; }
+.tab.compact .lbl { display: none; }
+.tab.compact:hover, .tab.compact:focus-visible { padding: 0 9px 0 6px; }
+.tab.compact:hover .lbl, .tab.compact:focus-visible .lbl { display: inline; }
+.tab[hidden] { display: none; }
 
 .panel {
   width: 348px; max-width: calc(100vw - 16px); max-height: min(60vh, 460px);
@@ -108,7 +124,7 @@ button:focus-visible, input:focus-visible { outline: 2px solid var(--accent); ou
 .modal .actions { display: flex; justify-content: flex-end; gap: 8px; flex-wrap: wrap; }
 
 @media (prefers-reduced-motion: no-preference) {
-  .panel, .toast, .chip { animation: in .12s ease-out; }
+  .panel, .toast { animation: in .12s ease-out; }
   @keyframes in { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: none; } }
 }
 `;
@@ -184,7 +200,7 @@ export function displayValue(item: Pick<PanelItem, 'entityType' | 'value'>): str
 }
 
 // ---------------------------------------------------------------------------
-// Shield: chip + panel + toast, anchored to the composer
+// Shield: status tab + panel + toast, anchored to the composer pill
 // ---------------------------------------------------------------------------
 
 export interface ChipState {
@@ -196,8 +212,18 @@ export interface ChipState {
 
 type PanelMode = 'live' | 'review' | 'after';
 
+/** Health of the field, from the content script: protected, paused (NOT protected), or nothing. */
+export type Protection = 'on' | 'paused' | null;
+
+const TAB_H = 22;
+/** How far the tab overlaps the pill's top border (the rest sits above it). */
+const TAB_OVERLAP = 6;
+/** "Protected" label stays this long after load / focus / route change, then shrinks to the icon. */
+const REVEAL_MS = 4000;
+
 class Shield {
-  private chip: HTMLElement | null = null;
+  private tab: HTMLButtonElement | null = null;
+  private tabLabel = '';
   private panel: HTMLElement | null = null;
   private toastEl: HTMLElement | null = null;
   private toastTimer: ReturnType<typeof setTimeout> | undefined;
@@ -209,6 +235,13 @@ class Shield {
   private afterItems: PanelItem[] = [];
   private raf = 0;
   private bound = false;
+  private protection: Protection = null;
+  private checking = false;
+  private compact = false;
+  private revealTimer: ReturnType<typeof setTimeout> | undefined;
+  private tick: ReturnType<typeof setInterval> | undefined;
+  /** Visual box of the composer (the rounded pill), cached per composer. */
+  private frameOf: { composer: HTMLElement; frame: HTMLElement; until: number } | null = null;
 
   init(anchor: () => Anchor | null, handlers: ShieldHandlers): void {
     this.anchor = anchor;
@@ -233,44 +266,125 @@ class Shield {
   }
 
   destroy(): void {
+    this.protection = null;
+    this.state = { items: [], notices: [], mode: 'auto', paused: false };
+    this.checking = false;
     this.closePanel('cancel');
-    this.chip?.remove(); this.chip = null;
+    this.updateTab();
     this.toastEl?.remove(); this.toastEl = null;
   }
 
-  // -- chip -----------------------------------------------------------------
+  // -- status inputs ----------------------------------------------------------
+
+  /**
+   * Persistent field status, driven by the content script's health check (not
+   * by the live scan), so "Protected" shows before anything is typed. null
+   * hides the tab unless the scan still has something to show.
+   */
+  setProtection(state: Protection): void {
+    if (state === this.protection && (!state || this.tab?.isConnected)) return;
+    const wasOn = this.protection === 'on';
+    this.protection = state;
+    if (state === 'on' && !wasOn) this.reveal();
+    else this.updateTab();
+  }
+
+  /** Send-time check in progress (slow names model): "Checking…". */
+  setChecking(on: boolean): void {
+    if (on === this.checking) return;
+    this.checking = on;
+    this.updateTab();
+  }
+
+  /** Show the full "Protected" label for a few seconds, then shrink to the icon. */
+  reveal(): void {
+    this.compact = false;
+    clearTimeout(this.revealTimer);
+    this.revealTimer = setTimeout(() => { this.compact = true; this.updateTab(); }, REVEAL_MS);
+    this.updateTab();
+  }
 
   render(state: ChipState, keepPanel = false): void {
     this.state = state;
-    const visible = state.paused || state.items.length > 0 || state.notices.length > 0;
-    if (!visible) { this.chip?.remove(); this.chip = null; this.closePanel('cancel', true); return; }
-    const a = this.anchor?.();
-    if (!a) { this.chip?.remove(); this.chip = null; return; }
+    if (!state.items.length && !state.notices.length) this.closePanel('cancel', true);
+    this.updateTab();
+    if (this.panelMode === 'live' && !keepPanel) this.buildPanel();
+  }
 
+  // -- tab --------------------------------------------------------------------
+
+  private updateTab(): void {
+    const s = this.state;
+    const paused = this.protection === 'paused' || s.paused;
+    const n = s.items.filter((i) => i.checked).length;
+    const hasList = s.items.length > 0 || s.notices.length > 0;
+    const visible = paused || this.checking || hasList || this.protection === 'on';
+    if (!visible) {
+      clearInterval(this.tick); this.tick = undefined;
+      this.tab?.remove(); this.tab = null;
+      return;
+    }
     const root = shell();
-    if (!this.chip) {
-      this.chip = el('button', 'float chip');
-      (this.chip as HTMLButtonElement).type = 'button';
-      this.chip.addEventListener('click', (e) => {
+    if (!this.tab || !this.tab.isConnected) {
+      this.tab = el('button', 'float tab');
+      this.tab.type = 'button';
+      this.tab.addEventListener('click', (e) => {
         e.stopPropagation();
+        if (!this.tab?.classList.contains('clickable')) { this.reveal(); return; }
         this.panel ? this.closePanel('cancel') : this.openLive();
       });
-      root.appendChild(this.chip);
+      root.appendChild(this.tab);
     }
-    const n = state.items.filter((i) => i.checked).length;
-    this.chip.classList.toggle('muted', state.paused || n === 0);
-    this.chip.replaceChildren(icon(state.paused ? 'pause' : 'shield'));
-    const label = state.paused
-      ? t('chipPaused')
-      : n > 0
-        ? t(state.mode === 'review' ? 'chipReview' : 'chipReplace', n)
-        : t('chipNoticed');
-    this.chip.append(document.createTextNode(label));
-    this.chip.setAttribute('aria-label', `${t('appName')}: ${label}`);
-    this.chip.setAttribute('aria-haspopup', 'dialog');
-    this.chip.setAttribute('aria-expanded', String(!!this.panel));
+
+    let label: string;
+    let glyph: 'shield' | 'pause' = 'shield';
+    let muted = false;
+    let shrinkable = false;
+    if (paused) {
+      label = t('tabNotProtected'); glyph = 'pause'; muted = true;
+    } else if (this.checking) {
+      label = t('tabChecking');
+    } else if (n > 0) {
+      label = t(s.mode === 'review' ? 'chipReview' : 'chipReplace', n);
+    } else if (hasList) {
+      label = t('chipNoticed'); muted = true;
+    } else {
+      label = t('tabProtected'); shrinkable = true;
+    }
+    const clickable = !paused && !this.checking && hasList;
+    const tab = this.tab;
+    tab.classList.toggle('muted', muted);
+    tab.classList.toggle('clickable', clickable);
+    tab.classList.toggle('compact', shrinkable && this.compact);
+    if (label !== this.tabLabel || tab.dataset.glyph !== glyph) {
+      this.tabLabel = label;
+      tab.dataset.glyph = glyph;
+      tab.replaceChildren(icon(glyph), el('span', 'lbl', label));
+    }
+    const full = paused ? t('markerPaused') : shrinkable ? t('markerOn') : `${t('appName')}: ${label}`;
+    tab.title = full;
+    tab.setAttribute('aria-label', full);
+    if (clickable) {
+      tab.setAttribute('aria-haspopup', 'dialog');
+      tab.setAttribute('aria-expanded', String(!!this.panel));
+    } else {
+      tab.removeAttribute('aria-haspopup');
+      tab.removeAttribute('aria-expanded');
+    }
+    // Composers move without any event we could hear (ChatGPT's new-chat box
+    // slides from the centre to the bottom). A rect read twice a second is cheap.
+    this.tick ??= setInterval(() => this.schedule(), 500);
     this.schedule();
-    if (this.panelMode === 'live' && !keepPanel) this.buildPanel();
+  }
+
+  private frame(a: Anchor): HTMLElement {
+    // Short-lived cache: sites restyle the pill (focus, drag-over, theme switch).
+    // A fallback is re-checked sooner: the real pill may still be mounting.
+    const c = this.frameOf;
+    if (c?.composer === a.composer && c.frame.isConnected && Date.now() < c.until) return c.frame;
+    const { frame, matched } = a.frame ? { frame: a.frame, matched: true } : locateFrame(a.composer, a.sendButton);
+    this.frameOf = { composer: a.composer, frame, until: Date.now() + (matched ? 3000 : 400) };
+    return frame;
   }
 
   private openLive(): void {
@@ -298,7 +412,7 @@ class Shield {
     this.panel = null;
     const wasMode = this.panelMode;
     this.panelMode = null;
-    this.chip?.setAttribute('aria-expanded', 'false');
+    if (this.tab?.classList.contains('clickable')) this.tab.setAttribute('aria-expanded', 'false');
     r?.(result);
     if (!silent && wasMode && wasMode !== 'review') this.anchor?.()?.composer.focus?.();
   }
@@ -355,7 +469,7 @@ class Shield {
     old?.remove();
     rootEl.appendChild(panel);
     this.panel = panel;
-    this.chip?.setAttribute('aria-expanded', 'true');
+    if (this.tab?.classList.contains('clickable')) this.tab.setAttribute('aria-expanded', 'true');
     this.schedule();
     if (first && mode === 'live') (panel.querySelector('input,button') as HTMLElement | null)?.focus();
   }
@@ -439,39 +553,54 @@ class Shield {
 
   private layout(): void {
     const a = this.anchor?.();
-    if (!a) return;
+    if (!a) { if (this.tab) this.tab.hidden = true; return; }
     retheme(a.composer, a.sendButton);
-    const r = a.composer.closest('form')?.getBoundingClientRect() ?? a.composer.getBoundingClientRect();
+    const fr = this.frame(a).getBoundingClientRect();
     const vw = innerWidth, vh = innerHeight;
     const gap = 8;
-    const chipH = 28;
-    if (this.chip) {
-      const w = this.chip.offsetWidth;
-      const top = Math.max(gap, r.top - chipH - gap);
-      const left = Math.min(Math.max(gap, r.right - w - 4), vw - w - gap);
-      Object.assign(this.chip.style, { top: `${top}px`, left: `${left}px` });
+    const off = fr.width === 0 || fr.bottom < 0 || fr.top > vh;
+
+    // Tab: on the pill's top border, just after the left corner curve. Flips to
+    // the bottom border when the pill is too close to the top of the viewport.
+    let tr: { top: number; bottom: number; left: number } | null = null;
+    if (this.tab) {
+      this.tab.hidden = off;
+      if (!off) {
+        const radius = Math.min(parseFloat(getComputedStyle(this.frame(a)).borderTopLeftRadius) || 0, fr.height / 2);
+        const w = this.tab.offsetWidth;
+        const left = Math.min(Math.max(4, fr.left + Math.min(Math.max(radius, 12), 32)), vw - w - 4);
+        let top = fr.top - TAB_H + TAB_OVERLAP;
+        if (top < 4) top = Math.min(fr.bottom - TAB_OVERLAP, vh - TAB_H - 4);
+        Object.assign(this.tab.style, { top: `${top}px`, left: `${left}px` });
+        tr = { top, bottom: top + TAB_H, left };
+      }
     }
+    // Panel and toast hang off the tab; without one, off the pill's top-left.
+    const ref = tr ?? { top: fr.top, bottom: fr.top, left: fr.left };
+    const tabBelow = !!tr && tr.top > fr.top;
+
     if (this.panel) {
       const w = this.panel.offsetWidth;
-      const left = Math.min(Math.max(gap, r.right - w - 4), vw - w - gap);
-      const chipTop = this.chip ? parseFloat(this.chip.style.top) : r.top - chipH - gap;
-      const above = chipTop - gap;
-      const below = vh - r.bottom - 2 * gap;
+      const left = Math.min(Math.max(gap, ref.left), vw - w - gap);
+      const above = (tabBelow ? fr.top : ref.top) - gap;
+      const downFrom = Math.max(fr.bottom, ref.bottom) + gap;
+      const below = vh - downFrom - gap;
       // Prefer above the composer (chat boxes sit at the bottom); flip when the
       // composer is near the top of the viewport.
       const up = above >= Math.min(this.panel.scrollHeight, 460) || above >= below;
       this.panel.style.maxHeight = `${Math.max(160, Math.min(460, (up ? above : below) - gap))}px`;
       Object.assign(this.panel.style, up
-        ? { left: `${left}px`, bottom: `${vh - chipTop + 6}px`, top: 'auto' }
-        : { left: `${left}px`, top: `${r.bottom + gap}px`, bottom: 'auto' });
+        ? { left: `${left}px`, bottom: `${vh - above}px`, top: 'auto' }
+        : { left: `${left}px`, top: `${downFrom}px`, bottom: 'auto' });
     }
     if (this.toastEl) {
       const w = this.toastEl.offsetWidth;
-      const left = Math.min(Math.max(gap, r.left + (r.width - w) / 2), vw - w - gap);
       const h = this.toastEl.offsetHeight;
-      Object.assign(this.toastEl.style, r.top - h - gap >= 0
-        ? { left: `${left}px`, bottom: `${vh - r.top + gap}px`, top: 'auto' }
-        : { left: `${left}px`, top: `${r.bottom + gap}px`, bottom: 'auto' });
+      const left = Math.min(Math.max(gap, ref.left), vw - w - gap);
+      const above = (tabBelow ? fr.top : ref.top) - gap;
+      Object.assign(this.toastEl.style, above - h >= 0
+        ? { left: `${left}px`, bottom: `${vh - above}px`, top: 'auto' }
+        : { left: `${left}px`, top: `${Math.max(fr.bottom, ref.bottom) + gap}px`, bottom: 'auto' });
     }
   }
 }

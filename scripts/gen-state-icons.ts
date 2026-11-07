@@ -1,13 +1,13 @@
 /**
- * Renders the toolbar icon variants by recolouring the shield itself:
- * on (green) and warn (orange). Off uses the plain blue icon. Output is committed (public/icon-state/),
+ * Renders the toolbar warn icon (orange shield: enabled but no chat box found).
+ * On and off use the plain blue icon; "protected" is a badge on the composer. Output is committed (public/icon-state/),
  * so builds stay reproducible. Run: bun scripts/gen-state-icons.ts
  */
 import { chromium } from '@playwright/test';
 import { readFileSync, mkdirSync } from 'node:fs';
 
 const SIZES = [16, 32, 48];
-const STATES = ['on', 'warn'] as const;
+const STATES = ['warn'] as const;
 mkdirSync('public/icon-state', { recursive: true });
 
 const b = await chromium.launch();
@@ -24,7 +24,7 @@ for (const size of SIZES) {
       img.src = src;
       await img.decode();
       // Recolour the shield itself (the grey lock is unaffected by hue shifts).
-      g.filter = state === 'on' ? 'hue-rotate(-80deg) saturate(1.1)' : 'hue-rotate(165deg) saturate(1.3) brightness(1.05)';
+      g.filter = 'hue-rotate(165deg) saturate(1.3) brightness(1.05)';
       g.drawImage(img, 0, 0, size, size);
     }, { src, size, state });
     await page.locator('#c').screenshot({ path: `public/icon-state/${state}-${size}.png`, omitBackground: true });
