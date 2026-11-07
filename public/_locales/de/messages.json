@@ -30,6 +30,21 @@
   "chipPaused": {
     "message": "Pausiert"
   },
+  "markerOn": {
+    "message": "PII Airlock schützt dieses Feld: personenbezogene Daten werden vor dem Senden ersetzt."
+  },
+  "markerPaused": {
+    "message": "PII Airlock ist pausiert: dieses Feld ist NICHT geschützt."
+  },
+  "tabProtected": {
+    "message": "Geschützt"
+  },
+  "tabNotProtected": {
+    "message": "Nicht geschützt"
+  },
+  "tabChecking": {
+    "message": "Prüfung…"
+  },
   "panelLive": {
     "message": "Wird beim Senden ersetzt"
   },

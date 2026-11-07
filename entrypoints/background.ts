@@ -122,7 +122,8 @@ export default defineBackground(() => {
     } else if (m?.type === MSG.HEALTH && sender.tab?.id !== undefined) {
       const tabId = sender.tab.id;
       const state = m.state === 'warn' || m.state === 'off' ? m.state : 'on';
-      const path = Object.fromEntries([16, 32, 48].map((n) => [n, state === 'off' ? `/icon/${n}.png` : `/icon-state/${state}-${n}.png`]));
+      // Only warn recolours the icon: "protected" is shown on the composer itself.
+      const path = Object.fromEntries([16, 32, 48].map((n) => [n, state === 'warn' ? `/icon-state/warn-${n}.png` : `/icon/${n}.png`]));
       void browser.action.setIcon({ tabId, path: path as never }).catch(() => {});
       void browser.action.setTitle({
         tabId,

@@ -32,4 +32,10 @@ export interface ChatAdapter {
    * Called after setText() when auto_scrub decision is taken.
    */
   triggerSend(composer: HTMLElement): void;
+
+  /**
+   * Optional override for the visible input box (the pill) the status tab sits
+   * on. Only for sites where the generic rule in lib/ui/frame.ts fails.
+   */
+  findFrame?(composer: HTMLElement): HTMLElement | null;
 }

@@ -7,6 +7,7 @@ import { NER_DETECT, type NerDetectResponse } from '../lib/detection/ner-message
 import { MSG } from '../lib/messages';
 import { BrowserMapping } from '../lib/mapping';
 import { startRestore } from '../lib/restore';
+import { shield } from '../lib/ui/components';
 
 export default defineContentScript({
   matches: [
@@ -104,14 +105,24 @@ export default defineContentScript({
     // Stateless: listeners live on `document`, so SPA remounts cannot open a gap.
     guard.install();
 
+    // Focusing the chat box shows the full "Protected" label again for a moment.
+    document.addEventListener('focusin', (e) => {
+      const c = adapter.findComposer();
+      if (c && e.target instanceof Node && c.contains(e.target)) shield.reveal();
+    }, true);
+
     // Health: does this page actually have a composer we can protect? A broken
     // selector otherwise fails silently while the popup claims "Active".
-    // State drives the toolbar icon: on = protecting, warn = enabled but no
-    // composer found (NOT protecting), off = switched off / paused.
+    // "Protected" is shown where the user types: a status tab on the composer's
+    // top border (on, or paused = NOT protected). The toolbar icon only changes
+    // for warn = enabled but no composer found, the one case with no field to mark.
     let lastState: string | null = null;
     let settled = false; // false during the SPA mount grace period
     const reportState = () => {
       const found = adapter.findComposer() !== null;
+      const s = currentSettings();
+      const paused = s.mode !== 'off' && !s.siteOff && Date.now() < s.pausedUntil;
+      shield.setProtection(!found ? null : isActive() ? 'on' : paused ? 'paused' : null);
       if (!found && !settled && isActive()) return; // may still be mounting
       const state = !isActive() ? 'off' : found ? 'on' : 'warn';
       if (state === lastState) return;
@@ -124,6 +135,26 @@ export default defineContentScript({
     setTimeout(() => void loadingSettings.then(reportState), 1500);
     setTimeout(() => { settled = true; reportState(); }, 4000);
     setInterval(reportState, 5000);
+
+    // Tab icon is per-tab state in the background and can be lost (browser reset
+    // on navigation, worker restart). Re-send on every return to the tab and on
+    // SPA route changes (ChatGPT "new chat" never reloads the page). Forces a
+    // fresh report by dropping the dedupe.
+    const resync = () => {
+      if (document.visibilityState === 'hidden') return;
+      lastState = null;
+      void loadingSettings.then(() => void loadSettings().then(reportState));
+    };
+    document.addEventListener('visibilitychange', resync);
+    window.addEventListener('focus', resync);
+    window.addEventListener('pageshow', resync);
+    let lastHref = location.href;
+    setInterval(() => {
+      if (location.href === lastHref) return;
+      lastHref = location.href;
+      settled = false; // new route: composer may be remounting
+      setTimeout(() => { settled = true; resync(); shield.reveal(); }, 1500);
+    }, 1000);
 
     // Propagate changes from the popup / options page in real time.
     browser.storage.onChanged.addListener((changes, area) => {

@@ -30,6 +30,21 @@
   "chipPaused": {
     "message": "En pause"
   },
+  "markerOn": {
+    "message": "PII Airlock protège ce champ : les données personnelles sont remplacées avant l’envoi."
+  },
+  "markerPaused": {
+    "message": "PII Airlock est en pause : ce champ n’est PAS protégé."
+  },
+  "tabProtected": {
+    "message": "Protégé"
+  },
+  "tabNotProtected": {
+    "message": "Non protégé"
+  },
+  "tabChecking": {
+    "message": "Vérification…"
+  },
   "panelLive": {
     "message": "Remplacé à l’envoi"
   },
