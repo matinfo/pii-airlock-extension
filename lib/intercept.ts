@@ -147,6 +147,26 @@ export class SendGuard {
   private _onInput = (e: Event) => this.scheduleScan(editableFrom(e));
   private _onPaste = (e: ClipboardEvent) => this.scheduleScan(editableFrom(e));
   private _onDrop = (e: DragEvent) => this.scheduleScan(editableFrom(e));
+  // Clearing the box (select-all + Delete, Cut, a script wiping it) does not
+  // always fire `input` on rich editors; without a rescan the tab keeps
+  // advertising replacements for text that is gone.
+  private _onCut = (e: ClipboardEvent) => this.scheduleScan(editableFrom(e));
+  private _onKeyup = (e: KeyboardEvent) => {
+    if (e.key === 'Backspace' || e.key === 'Delete') this.scheduleScan(editableFrom(e));
+  };
+  private watcher: MutationObserver | undefined;
+  private watched: HTMLElement | null = null;
+
+  /** Rescan whenever the live editable's content changes, whatever the cause. */
+  private watch(editable: HTMLElement): void {
+    if (this.watched === editable || isTextControl(editable)) return;
+    this.watcher?.disconnect();
+    this.watched = editable;
+    this.watcher ??= new MutationObserver(() => {
+      if (this.watched?.isConnected) this.scheduleScan(this.watched);
+    });
+    this.watcher.observe(editable, { childList: true, characterData: true, subtree: true });
+  }
 
   constructor(adapter: ChatAdapter, opts: GuardOptions = {}) {
     this.adapter = adapter;
@@ -164,6 +184,8 @@ export class SendGuard {
     window.addEventListener('submit', this._onSubmit, true);
     window.addEventListener('paste', this._onPaste, true);
     window.addEventListener('drop', this._onDrop, true);
+    window.addEventListener('cut', this._onCut, true);
+    window.addEventListener('keyup', this._onKeyup, true);
     window.addEventListener('input', this._onInput, true);
     shield.init(() => this.anchor(), {
       onToggle: (key, checked) => { if (checked) this.excluded.delete(key); else this.excluded.add(key); },
@@ -184,6 +206,9 @@ export class SendGuard {
     window.removeEventListener('submit', this._onSubmit, true);
     window.removeEventListener('paste', this._onPaste, true);
     window.removeEventListener('drop', this._onDrop, true);
+    window.removeEventListener('cut', this._onCut, true);
+    window.removeEventListener('keyup', this._onKeyup, true);
+    this.watcher?.disconnect(); this.watched = null;
     this.mapping.clear();
   }
 
@@ -288,6 +313,7 @@ export class SendGuard {
     // a scan then would re-draw the chip over a message that is already leaving.
     if (this._busy || this._sending) return;
     this.liveEditable = editable;
+    this.watch(editable);
     this.scanQueued = true;
     clearTimeout(this.scanTimer);
     this.scanTimer = setTimeout(() => void this.scan(editable), 350);

@@ -18,6 +18,15 @@ const MODES: Mode[] = ["auto", "review", "off"];
 const modeLabel = (m: Mode) => t(`mode${m[0]!.toUpperCase()}${m.slice(1)}`);
 const modeHint = (m: Mode) => t(`mode${m[0]!.toUpperCase()}${m.slice(1)}Hint`);
 
+/** True when `url` matches a content-script pattern from the manifest. */
+function isSupportedUrl(url: string): boolean {
+  const patterns = browser.runtime.getManifest().content_scripts?.flatMap((c) => c.matches ?? []) ?? [];
+  return patterns.some((m) => {
+    const re = new RegExp("^" + m.replace(/[.+?^${}()|[\]\\]/g, "\\$&").replace(/\*/g, ".*") + "$");
+    return re.test(url);
+  });
+}
+
 function Shield() {
   return <img src={browser.runtime.getURL("/icon/48.png" as never)} width={20} height={20} alt="" aria-hidden="true" />;
 }
@@ -29,6 +38,9 @@ function App() {
   const [count, setCount] = useState(0);
   // null = no PII Airlock content script on this tab (not a supported site).
   const [tab, setTab] = useState<TabStatus | null>(null);
+  // Supported site, but the content script never loaded here (tab opened before
+  // install/update): the page is NOT protected until it is reloaded.
+  const [staleTabId, setStaleTabId] = useState<number | null>(null);
   const [cleared, setCleared] = useState(false);
   const [now, setNow] = useState(Date.now());
   const [names, setNames] = useState<boolean | null>(null);
@@ -49,6 +61,7 @@ function App() {
         setTab(((await browser.tabs.sendMessage(tb.id, { type: MSG.STATUS })) as TabStatus | undefined) ?? null);
       } catch {
         setTab(null);
+        if (tb.url && isSupportedUrl(tb.url)) setStaleTabId(tb.id);
       }
     });
     void isInstalled().then(setNames);
@@ -89,7 +102,8 @@ function App() {
 
   // One honest line: what is true on THIS tab right now.
   let status: { text: string; tone: "ok" | "warn" | "off" };
-  if (!tab) status = { text: t("popUnsupported"), tone: "off" };
+  if (!tab && staleTabId !== null) status = { text: t("popReload"), tone: "warn" };
+  else if (!tab) status = { text: t("popUnsupported"), tone: "off" };
   else if (mode === "off") status = { text: t("popOff"), tone: "off" };
   else if (siteOff) status = { text: t("popSiteOff"), tone: "off" };
   else if (paused) status = { text: t("popPaused", new Date(pausedUntil).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })), tone: "off" };
@@ -115,6 +129,12 @@ function App() {
           {tab && <div className="status-sub">{tab.host}</div>}
         </div>
       </section>
+
+      {staleTabId !== null && (
+        <button className="btn" onClick={() => { void browser.tabs.reload(staleTabId); window.close(); }}>
+          {t("popReloadBtn")}
+        </button>
+      )}
 
       {tab && (
         <label className="switch-row">
@@ -163,7 +183,7 @@ function App() {
 
       <footer>
         <span>{t("popScrubbed", count)}</span>
-        <button className="link" onClick={clearAll} title={t("popClearHint")}>
+        <button className="link btn" onClick={clearAll} title={t("popClearHint")}>
           {cleared ? t("popCleared") : t("popClear")}
         </button>
       </footer>

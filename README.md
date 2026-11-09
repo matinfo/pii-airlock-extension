@@ -10,7 +10,7 @@ A browser extension that swaps personal data for placeholders in AI chat message
 
 [![CI](https://github.com/matinfo/pii-airlock-extension/actions/workflows/ci.yml/badge.svg)](https://github.com/matinfo/pii-airlock-extension/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
-![Version](https://img.shields.io/badge/version-0.1.0-blue)
+![Version](https://img.shields.io/badge/version-0.2.0-blue)
 ![Chrome MV3](https://img.shields.io/badge/Chrome-MV3-4285F4?logo=googlechrome&logoColor=white)
 ![Firefox](https://img.shields.io/badge/Firefox-MV2-FF7139?logo=firefoxbrowser&logoColor=white)
 ![Local only](https://img.shields.io/badge/privacy-100%25%20on--device-brightgreen)
@@ -22,7 +22,9 @@ Works on **Claude · ChatGPT · Gemini · Copilot · Perplexity · Mistral**
 
 <br>
 
-<img src="store-assets/chrome/1-live-chip.png" alt="Chip near the composer counting what will be replaced" width="720">
+<img src="screenshots/composer-with-pii-detection.png" alt="Status tab on the composer counting what will be replaced" width="720">
+
+<a href="screenshots/demo_sample.mp4"><b>▶ Watch the demo (mp4)</b></a>
 
 </div>
 
@@ -40,7 +42,7 @@ Chat sees  Mail <EMAIL_ADDRESS_1>, card <CREDIT_CARD_1>
 - **On-device.** Your text never leaves the browser.
 
 <div align="center">
-<img src="store-assets/chrome/2-review.png" alt="Review panel before sending" width="560">
+<img src="screenshots/composer-with-pii-review.png" alt="Review panel before sending" width="420">
 </div>
 
 ---
@@ -48,7 +50,7 @@ Chat sees  Mail <EMAIL_ADDRESS_1>, card <CREDIT_CARD_1>
 ## What it does
 
 1. You type or paste a message in an AI chat.
-2. A chip near the composer shows how many items will be replaced.
+2. A status tab on the composer shows how many items will be replaced.
 3. When you send (Enter or the send button), the extension checks the text first.
 4. Sensitive data is replaced with placeholders like `<EMAIL_ADDRESS_1>`, then the message is sent.
 5. The chat's answer is shown with your real values put back (display only). The mapping lives in memory for the tab, never on disk.
@@ -100,6 +102,12 @@ Names use two layers: a fast built-in English lexicon, and an optional on-device
 
 The same table is in the extension's Settings page.
 
+<div align="center">
+<img src="screenshots/popup.png" alt="Toolbar popup: status, mode, pause" width="280">
+&nbsp;
+<img src="screenshots/settings.png" alt="Settings page" width="520">
+</div>
+
 ---
 
 ## Supported sites
@@ -122,7 +130,7 @@ Other sites are not supported: the extension does not run on them, and requests 
 - **Your text never leaves your device.** Detection runs locally. There is no analytics and no remote service.
 - **One optional download.** If you turn on better name detection, the extension downloads the model once from a pinned Hugging Face revision, verifies its SHA-256 and stores it in the browser cache. Nothing else is fetched, and your text is never part of that request.
 - **No raw PII on disk.** Placeholder mappings live in memory, mirrored per tab in `storage.session` (RAM only, dropped when the browser closes). Settings sit in `storage.sync`. Your own allow/deny lists and the counter stay in `storage.local`, never synced. "Clear session data" wipes them.
-- **Minimal permissions.** `storage` plus the host patterns of the supported sites above. No `<all_urls>`.
+- **Minimal permissions.** `storage`, `scripting` (Chrome/Edge: starts protection in tabs already open at install/update) plus the host patterns of the supported sites above. No `<all_urls>`.
 
 ---
 

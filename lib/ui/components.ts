@@ -137,7 +137,7 @@ function shell(): HTMLElement {
   if (ui && host?.isConnected) return ui;
   host = document.createElement('div');
   host.id = UI_HOST_ID;
-  host.style.cssText = 'position:fixed;z-index:2147483647;top:0;left:0;width:0;height:0;';
+  host.style.cssText = 'position:fixed;z-index:auto;top:0;left:0;width:0;height:0;';
   (document.body ?? document.documentElement).appendChild(host);
   root = host.attachShadow({ mode: 'closed' });
   const style = document.createElement('style');

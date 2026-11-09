@@ -20,7 +20,25 @@ export default defineContentScript({
     'https://*.perplexity.ai/*',
     'https://*.mistral.ai/*',
   ],
-  main() {
+  main(ctx) {
+    // This script is "orphaned" when the extension is reloaded/updated/removed:
+    // its extension APIs die but its page UI and listeners would stay, showing
+    // "Protected" on a field nothing protects (a replacement script is injected
+    // by the background, or the popup asks for a reload). Retire it: remove the
+    // UI, the send listeners and the restorer, and stop all timers.
+    let retired = false;
+    let stopRestore: (() => void) | undefined;
+    const retire = () => {
+      if (retired) return;
+      retired = true;
+      stopRestore?.();
+      guard.destroy();
+      shield.setProtection(null);
+    };
+    ctx.onInvalidated(retire);
+    // Fallback where WXT's invalidation signal is missed: runtime.id disappears.
+    ctx.setInterval(() => { if (!browser.runtime?.id) retire(); }, 2000);
+
     // Route Layer 3 NER to the background (→ offscreen on Chrome, direct on
     // Firefox). Fail-open: any messaging error yields [] so L1+L2 still run.
     setNerTransport(async (text, lang) => {
@@ -89,8 +107,9 @@ export default defineContentScript({
       })
       .catch(() => {});
     void restoring.then(() => {
-      if (document.body) startRestore(mapping);
-      else document.addEventListener('DOMContentLoaded', () => startRestore(mapping), { once: true });
+      if (retired) return;
+      if (document.body) stopRestore = startRestore(mapping);
+      else document.addEventListener('DOMContentLoaded', () => { if (!retired) stopRestore = startRestore(mapping); }, { once: true });
     });
 
     const guard = new SendGuard(adapter, {
@@ -107,6 +126,7 @@ export default defineContentScript({
 
     // Focusing the chat box shows the full "Protected" label again for a moment.
     document.addEventListener('focusin', (e) => {
+      if (retired) return;
       const c = adapter.findComposer();
       if (c && e.target instanceof Node && c.contains(e.target)) shield.reveal();
     }, true);
@@ -119,6 +139,7 @@ export default defineContentScript({
     let lastState: string | null = null;
     let settled = false; // false during the SPA mount grace period
     const reportState = () => {
+      if (retired) return;
       const found = adapter.findComposer() !== null;
       const s = currentSettings();
       const paused = s.mode !== 'off' && !s.siteOff && Date.now() < s.pausedUntil;
@@ -134,13 +155,14 @@ export default defineContentScript({
     // periodic tick also catches a timed pause expiring.
     setTimeout(() => void loadingSettings.then(reportState), 1500);
     setTimeout(() => { settled = true; reportState(); }, 4000);
-    setInterval(reportState, 5000);
+    ctx.setInterval(reportState, 5000);
 
     // Tab icon is per-tab state in the background and can be lost (browser reset
     // on navigation, worker restart). Re-send on every return to the tab and on
     // SPA route changes (ChatGPT "new chat" never reloads the page). Forces a
     // fresh report by dropping the dedupe.
     const resync = () => {
+      if (retired) return;
       if (document.visibilityState === 'hidden') return;
       lastState = null;
       void loadingSettings.then(() => void loadSettings().then(reportState));
@@ -149,11 +171,11 @@ export default defineContentScript({
     window.addEventListener('focus', resync);
     window.addEventListener('pageshow', resync);
     let lastHref = location.href;
-    setInterval(() => {
+    ctx.setInterval(() => {
       if (location.href === lastHref) return;
       lastHref = location.href;
       settled = false; // new route: composer may be remounting
-      setTimeout(() => { settled = true; resync(); shield.reveal(); }, 1500);
+      setTimeout(() => { settled = true; resync(); if (!retired) shield.reveal(); }, 1500);
     }, 1000);
 
     // Propagate changes from the popup / options page in real time.

@@ -128,6 +128,12 @@
   "popUnsupported": {
     "message": "Inactif sur ce site"
   },
+  "popReload": {
+    "message": "Rechargez cette page pour activer la protection"
+  },
+  "popReloadBtn": {
+    "message": "Recharger"
+  },
   "popOff": {
     "message": "La protection est désactivée"
   },
@@ -306,7 +312,7 @@
     "message": "Enregistré"
   },
   "optFooter": {
-    "message": "Open source. Votre texte ne quitte jamais votre navigateur."
+    "message": "Votre texte ne quitte jamais votre navigateur."
   },
   "nerTitle": {
     "message": "Meilleure détection des noms"
