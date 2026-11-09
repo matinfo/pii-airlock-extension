@@ -10,7 +10,7 @@ A browser extension that swaps personal data for placeholders in AI chat message
 
 [![CI](https://github.com/matinfo/pii-airlock-extension/actions/workflows/ci.yml/badge.svg)](https://github.com/matinfo/pii-airlock-extension/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
-![Version](https://img.shields.io/badge/version-0.2.0-blue)
+![Version](https://img.shields.io/badge/version-0.2.1-blue)
 ![Chrome MV3](https://img.shields.io/badge/Chrome-MV3-4285F4?logo=googlechrome&logoColor=white)
 ![Firefox](https://img.shields.io/badge/Firefox-MV2-FF7139?logo=firefoxbrowser&logoColor=white)
 ![Local only](https://img.shields.io/badge/privacy-100%25%20on--device-brightgreen)

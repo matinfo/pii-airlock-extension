@@ -1,6 +1,6 @@
 # Privacy policy
 
-*PII Airlock Extension, version 0.2.0*
+*PII Airlock Extension, version 0.2.1*
 
 **Short version: the extension does not collect, transmit or sell your data. Your messages are checked on your device and never sent to us or to any third party by the extension.**
 
