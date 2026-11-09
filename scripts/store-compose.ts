@@ -8,9 +8,9 @@ import { readFileSync, mkdirSync } from 'node:fs';
 
 interface Shot { file: string; out: string; caption: string; box: [number, number]; top?: boolean }
 const SHOTS: Shot[] = [
-  { file: 'composer-with-pii-detection.png', out: '1-live-chip', caption: 'See what will be replaced, as you type', box: [1120, 340] },
-  { file: 'composer-with-pii-review.png', out: '2-review', caption: 'Review before sending, untick anything', box: [640, 580] },
-  { file: 'popup.png', out: '3-popup', caption: 'Protection per site, one click', box: [470, 585] },
+  { file: 'composer-with-pii-detection.png', out: '1-live-chip', caption: 'See what will be replaced, as you type', box: [1120, 323] },
+  { file: 'composer-with-pii-review.png', out: '2-review', caption: 'Review before sending, untick anything', box: [643, 580] },
+  { file: 'popup.png', out: '3-popup', caption: 'Protection per site, one click', box: [446, 585] },
   { file: 'settings.png', out: '4-settings', caption: 'Choose a mode, add better name detection', box: [1000, 540], top: true },
 ];
 
