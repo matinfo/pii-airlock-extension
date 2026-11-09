@@ -1,6 +1,6 @@
 # Privacy policy
 
-*PII Airlock Extension, version 0.1.0*
+*PII Airlock Extension, version 0.2.0*
 
 **Short version: the extension does not collect, transmit or sell your data. Your messages are checked on your device and never sent to us or to any third party by the extension.**
 
@@ -25,6 +25,7 @@ If you turn on **Better name detection**, the extension downloads a language mod
 
 - **Access to the supported chat sites** (ChatGPT, Claude, Gemini, Copilot, Perplexity, Mistral): needed to read the message box and replace data before sending. No other sites.
 - **storage**: to keep your settings and lists.
+- **scripting** (Chrome and Edge): to start protection in chat tabs that were already open when the extension was installed or updated, so you do not have to reload them. It only injects the extension's own packaged script into the supported sites above.
 - **offscreen** (Chrome and Edge): to run the optional names model off the page.
 
 ## Limits you should know

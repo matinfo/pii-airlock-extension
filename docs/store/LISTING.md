@@ -40,7 +40,7 @@ Turn it on in Settings to download an on-device model (about 181 MB, once, from 
 Privacy
 - Your text never leaves your device.
 - Placeholder mappings live in memory for the tab, never on disk.
-- Permissions are limited to storage and the supported chat sites.
+- Permissions are limited to storage, scripting (Chrome/Edge, own script on the supported chat sites only) and the supported chat sites.
 
 Limits
 Detection reduces risk but cannot guarantee that everything is found. File attachments, voice input and screenshots are not covered.
@@ -52,6 +52,7 @@ Detect personal data in messages typed into supported AI chat sites and replace 
 
 ## Chrome: permission justifications
 - storage: keeps the user's settings, allow/deny lists and the per-tab placeholder mapping (session storage, RAM only).
+- scripting: injects the extension's own packaged content script into already-open tabs of the supported chat sites after install/update, so protection starts without a reload. Never used on other sites, never runs remote code.
 - offscreen: hosts the optional on-device names model in an offscreen document so it never runs in the page or blocks it.
 - Host permissions (chatgpt.com, chat.openai.com, claude.ai, gemini.google.com, copilot.microsoft.com, copilot.cloud.microsoft, *.perplexity.ai, *.mistral.ai): required to read the message box and replace personal data before the site receives it. No other sites, no <all_urls>.
 - wasm-unsafe-eval (CSP): lets the packaged ONNX Runtime WebAssembly file compile. No remote code, no unsafe-eval.
