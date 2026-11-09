@@ -128,6 +128,12 @@
   "popUnsupported": {
     "message": "Auf dieser Seite nicht aktiv"
   },
+  "popReload": {
+    "message": "Seite neu laden, um den Schutz zu aktivieren"
+  },
+  "popReloadBtn": {
+    "message": "Neu laden"
+  },
   "popOff": {
     "message": "Schutz ist ausgeschaltet"
   },
@@ -306,7 +312,7 @@
     "message": "Gespeichert"
   },
   "optFooter": {
-    "message": "Open Source. Ihr Text verlässt nie Ihren Browser."
+    "message": "Ihr Text verlässt nie Ihren Browser."
   },
   "nerTitle": {
     "message": "Bessere Namenserkennung"

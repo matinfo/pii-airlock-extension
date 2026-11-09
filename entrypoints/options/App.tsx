@@ -163,7 +163,7 @@ function App() {
 
       <footer>
         <span>{t("optFooter")}</span>
-        <button className="link" onClick={() => resetDialog.current?.showModal()}>{t("optReset")}</button>
+        <button className="link btn" onClick={() => resetDialog.current?.showModal()}>{t("optReset")}</button>
       </footer>
 
       <dialog ref={resetDialog} className="confirm" aria-labelledby="reset-title">

@@ -94,9 +94,38 @@ async function detect(text: string, lang: string): Promise<Detection[]> {
 }
 
 export default defineBackground(() => {
+  /**
+   * Tabs already open at install/update have no content script until reload,
+   * so they would be unprotected. Inject into matching tabs right away.
+   * MV3: scripting.executeScript (needs the `scripting` permission).
+   * MV2 (Firefox): tabs.executeScript. Best effort: a failure leaves the popup's
+   * "reload this page" hint as the fallback.
+   */
+  async function injectIntoOpenTabs(): Promise<void> {
+    const cs = browser.runtime.getManifest().content_scripts?.[0];
+    if (!cs?.js?.length || !cs.matches?.length) return;
+    const tabs = await browser.tabs.query({ url: cs.matches });
+    const g = globalThis as {
+      chrome?: { scripting?: { executeScript(o: { target: { tabId: number }; files: string[] }): Promise<unknown> } };
+    };
+    await Promise.all(
+      tabs.map(async (tb) => {
+        if (tb.id === undefined) return;
+        try {
+          if (g.chrome?.scripting) {
+            await g.chrome.scripting.executeScript({ target: { tabId: tb.id }, files: cs.js! });
+          } else {
+            for (const file of cs.js!) await browser.tabs.executeScript(tb.id, { file });
+          }
+        } catch { /* discarded/restricted tab: popup hint covers it */ }
+      }),
+    );
+  }
+
   // Defaults on FRESH INSTALL only, and never over existing values. 'update'
   // (extension or browser) must not reset the user's settings.
   browser.runtime.onInstalled.addListener(async ({ reason }) => {
+    if (reason === 'install' || reason === 'update') void injectIntoOpenTabs();
     if (reason !== 'install') return;
     const existing = await browser.storage.sync.get(['mode', 'overrides']);
     await browser.storage.sync.set({

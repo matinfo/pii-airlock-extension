@@ -44,7 +44,7 @@ export default defineConfig({
       // 'offscreen' is an MV3-only permission (Chrome/Edge). Firefox MV2 hosts
       // the NER model in its persistent background page instead.
       if (manifest.manifest_version === 3) {
-        manifest.permissions = [...(manifest.permissions ?? []), 'offscreen'];
+        manifest.permissions = [...(manifest.permissions ?? []), 'offscreen', 'scripting'];
         // chrome.offscreen shipped in Chrome 109.
         (manifest as Record<string, unknown>).minimum_chrome_version = '109';
         // ESM service worker → Vite code-splits the dynamic transformers import

@@ -128,6 +128,12 @@
   "popUnsupported": {
     "message": "Non attivo su questo sito"
   },
+  "popReload": {
+    "message": "Ricarica questa pagina per attivare la protezione"
+  },
+  "popReloadBtn": {
+    "message": "Ricarica"
+  },
   "popOff": {
     "message": "La protezione è disattivata"
   },
@@ -306,7 +312,7 @@
     "message": "Salvato"
   },
   "optFooter": {
-    "message": "Open source. Il tuo testo non lascia mai il browser."
+    "message": "Il tuo testo non lascia mai il browser."
   },
   "nerTitle": {
     "message": "Rilevamento dei nomi migliore"
