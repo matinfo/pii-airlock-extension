@@ -15,7 +15,7 @@ if (tag && tag.replace(/^v/, '') !== pkg.version) {
   errors.push(`tag ${tag} != package.json version ${pkg.version}`);
 }
 
-const ALLOWED_PERMS = new Set(['storage', 'offscreen']);
+const ALLOWED_PERMS = new Set(['storage', 'offscreen', 'scripting']);
 const targets = ['chrome-mv3', 'edge-mv3', 'firefox-mv2'];
 
 for (const t of targets) {
