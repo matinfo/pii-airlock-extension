@@ -101,8 +101,8 @@ jobs:
           CHROME_CLIENT_ID: ${{ secrets.CHROME_CLIENT_ID }}
           CHROME_CLIENT_SECRET: ${{ secrets.CHROME_CLIENT_SECRET }}
           CHROME_REFRESH_TOKEN: ${{ secrets.CHROME_REFRESH_TOKEN }}
-          DRY_RUN: ${{ github.event_name == 'workflow_dispatch' && inputs.dry_run && 'true' || '' }}
-        run: bunx wxt submit ${DRY_RUN:+--dry-run} --chrome-zip dist/*-chrome.zip
+          SUBMIT_DRY: ${{ github.event_name == 'workflow_dispatch' && inputs.dry_run && 'true' || '' }}
+        run: bunx wxt submit ${SUBMIT_DRY:+--dry-run} --chrome-zip dist/*-chrome.zip
 
   firefox:
     needs: package
@@ -124,5 +124,5 @@ jobs:
           FIREFOX_EXTENSION_ID: pii-airlock@matinfo.dev
           FIREFOX_JWT_ISSUER: ${{ secrets.FIREFOX_JWT_ISSUER }}
           FIREFOX_JWT_SECRET: ${{ secrets.FIREFOX_JWT_SECRET }}
-          DRY_RUN: ${{ github.event_name == 'workflow_dispatch' && inputs.dry_run && 'true' || '' }}
-        run: bunx wxt submit ${DRY_RUN:+--dry-run} --firefox-zip dist/*-firefox.zip --firefox-sources-zip dist/*-sources.zip
+          SUBMIT_DRY: ${{ github.event_name == 'workflow_dispatch' && inputs.dry_run && 'true' || '' }}
+        run: bunx wxt submit ${SUBMIT_DRY:+--dry-run} --firefox-zip dist/*-firefox.zip --firefox-sources-zip dist/*-sources.zip
