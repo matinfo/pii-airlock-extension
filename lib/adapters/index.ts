@@ -11,6 +11,7 @@ import { perplexityAdapter } from './perplexity';
 import { poeAdapter } from './poe';
 import { characterAdapter } from './character';
 import { mistralAdapter } from './mistral';
+import { euriaAdapter } from './euria';
 import { huggingfaceAdapter } from './huggingface';
 import { youAdapter } from './you';
 import { genericAdapter } from './generic';
@@ -30,6 +31,7 @@ const NAMED: Array<{ hosts: string[]; adapter: ChatAdapter }> = [
   { hosts: ['poe.com'],                        adapter: poeAdapter },
   { hosts: ['character.ai'],                   adapter: characterAdapter },
   { hosts: ['mistral.ai'],                     adapter: mistralAdapter },
+  { hosts: ['euria.infomaniak.com'],           adapter: euriaAdapter },
   { hosts: ['huggingface.co'],                 adapter: huggingfaceAdapter },
   { hosts: ['you.com'],                        adapter: youAdapter },
 ];

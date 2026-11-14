@@ -9,6 +9,9 @@ import { BrowserMapping } from '../lib/mapping';
 import { startRestore } from '../lib/restore';
 import { shield } from '../lib/ui/components';
 
+/** Chat apps that live inside another site's iframe: the only subframes we run in. */
+const FRAMED_HOSTS = new Set(['euria.infomaniak.com']);
+
 export default defineContentScript({
   matches: [
     'https://chatgpt.com/*',
@@ -21,8 +24,15 @@ export default defineContentScript({
     'https://*.perplexity.ai/*',
     'https://poe.com/*',
     'https://*.mistral.ai/*',
+    // Infomaniak Euria: the app is an iframe inside ksuite.infomaniak.com/<id>/euria
+    // (and also opens top-level). Hence allFrames below.
+    'https://euria.infomaniak.com/*',
   ],
+  // Needed for Euria only (framed by kSuite). Other hosts bail out in subframes
+  // below, so same-origin iframes on chatgpt.com etc. never get a second guard.
+  allFrames: true,
   main(ctx) {
+    if (window !== window.top && !FRAMED_HOSTS.has(location.hostname)) return;
     // This script is "orphaned" when the extension is reloaded/updated/removed:
     // its extension APIs die but its page UI and listeners would stay, showing
     // "Protected" on a field nothing protects (a replacement script is injected

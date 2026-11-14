@@ -6,7 +6,7 @@ A **standalone WXT browser extension** (Chrome/Edge MV3 + Firefox MV2) that auto
 
 - **No backend required.** Zero install friction — installs from browser store, works immediately.
 - **Pure JS detection engine** bundled inside the extension (compromise.js NER + regex).
-- Targets (verified live): ChatGPT, Claude, Gemini, Copilot, Perplexity, Poe, Mistral. Other adapters (character, huggingface, you) exist but are not shipped until verified on the live site.
+- Targets (verified live): ChatGPT, Claude, Gemini, Copilot, Perplexity, Poe, Mistral, Euria (Infomaniak). Other adapters (character, huggingface, you) exist but are not shipped until verified on the live site.
 - Enhanced mode via the `pii-airlock` proxy (localhost:8745) is NOT implemented (no code talks to it). Do not document it to users until it exists; "better detection" today = the opt-in on-device names model.
 
 ## Related project
@@ -52,6 +52,7 @@ lib/
     copilot.ts       copilot.microsoft.com, m365.cloud.microsoft/chat (path-gated)
     perplexity.ts    perplexity.ai
     poe.ts           poe.com
+    euria.ts         euria.infomaniak.com (iframe in ksuite.infomaniak.com/<id>/euria; content script allFrames + FRAMED_HOSTS guard)
     generic.ts       Heuristic fallback for any chat UI
   ui/
     components.ts    Shadow-DOM status tab + review panel + toast + failure modal

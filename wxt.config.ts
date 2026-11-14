@@ -80,6 +80,7 @@ export default defineConfig({
       'https://*.perplexity.ai/*',
       'https://poe.com/*',
       'https://*.mistral.ai/*',
+      'https://euria.infomaniak.com/*',
     ],
     action: {
       default_title: 'PII Airlock',
