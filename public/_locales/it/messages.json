@@ -122,6 +122,9 @@
   "popActive": {
     "message": "Protezione di questa pagina attiva"
   },
+  "popNotChat": {
+    "message": "Nessuna chat IA in questa pagina."
+  },
   "popNoComposer": {
     "message": "Nessuna casella di chat trovata. Non protetto qui."
   },

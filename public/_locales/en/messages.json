@@ -122,6 +122,9 @@
   "popActive": {
     "message": "Protecting this page"
   },
+  "popNotChat": {
+    "message": "No AI chat on this page."
+  },
   "popNoComposer": {
     "message": "No chat box found. Not protected here."
   },

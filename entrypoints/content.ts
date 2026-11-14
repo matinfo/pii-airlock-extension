@@ -205,6 +205,7 @@ export default defineContentScript({
           site: adapter.name,
           host,
           composerFound: adapter.findComposer() !== null,
+          chatPage: adapter.isChatPage?.() !== false,
           mode: cur.mode,
           siteOff: cur.siteOff,
           pausedUntil: cur.pausedUntil,

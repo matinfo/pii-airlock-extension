@@ -122,6 +122,9 @@
   "popActive": {
     "message": "Diese Seite ist geschützt"
   },
+  "popNotChat": {
+    "message": "Kein KI-Chat auf dieser Seite."
+  },
   "popNoComposer": {
     "message": "Kein Eingabefeld gefunden. Hier nicht geschützt."
   },

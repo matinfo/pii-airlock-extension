@@ -53,6 +53,7 @@ T = {
  'btnSendUnscanned': ('Send unchecked', 'Envoyer sans vérifier', 'Ungeprüft senden'),
  # popup
  'popActive': ('Protecting this page', 'Cette page est protégée', 'Diese Seite ist geschützt'),
+ 'popNotChat': ('No AI chat on this page.', 'Pas de chat IA sur cette page.', 'Kein KI-Chat auf dieser Seite.'),
  'popNoComposer': ('No chat box found. Not protected here.', 'Aucune zone de saisie trouvée. Page non protégée.', 'Kein Eingabefeld gefunden. Hier nicht geschützt.'),
  'popUnsupported': ('Not active on this site', 'Inactif sur ce site', 'Auf dieser Seite nicht aktiv'),
  'popReload': ('Reload this page to activate protection', 'Rechargez cette page pour activer la protection', 'Seite neu laden, um den Schutz zu aktivieren'),

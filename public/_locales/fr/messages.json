@@ -122,6 +122,9 @@
   "popActive": {
     "message": "Cette page est protégée"
   },
+  "popNotChat": {
+    "message": "Pas de chat IA sur cette page."
+  },
   "popNoComposer": {
     "message": "Aucune zone de saisie trouvée. Page non protégée."
   },
