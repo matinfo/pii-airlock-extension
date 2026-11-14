@@ -18,7 +18,7 @@ A browser extension that swaps personal data for placeholders in AI chat message
 ![TypeScript](https://img.shields.io/badge/TypeScript-strict-3178C6?logo=typescript&logoColor=white)
 ![Built with WXT](https://img.shields.io/badge/built%20with-WXT-67D55E)
 
-Works on **Claude · ChatGPT · Gemini · Copilot · Perplexity · Mistral**
+Works on **Claude · ChatGPT · Gemini · Copilot · Perplexity · Poe · Mistral**
 
 <br>
 
@@ -119,9 +119,10 @@ Verified on the live site:
 - gemini.google.com
 - copilot.microsoft.com, copilot.cloud.microsoft, m365.cloud.microsoft/chat
 - perplexity.ai
+- poe.com
 - chat.mistral.ai (Le Chat - Vibe)
 
-Other sites are not supported: the extension does not run on them, and requests no permission for them. Adapters for Poe, Character.ai, Hugging Face Chat and You.com exist in the code but are not shipped until they have been verified in a real browser.
+Other sites are not supported: the extension does not run on them, and requests no permission for them. Adapters for Character.ai, Hugging Face Chat and You.com exist in the code but are not shipped until they have been verified in a real browser.
 
 ---
 

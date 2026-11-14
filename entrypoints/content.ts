@@ -19,6 +19,7 @@ export default defineContentScript({
     'https://copilot.cloud.microsoft/*',
     'https://m365.cloud.microsoft/*',
     'https://*.perplexity.ai/*',
+    'https://poe.com/*',
     'https://*.mistral.ai/*',
   ],
   main(ctx) {
