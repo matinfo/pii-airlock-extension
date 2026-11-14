@@ -1,4 +1,8 @@
-/** Adapter for copilot.microsoft.com and copilot.cloud.microsoft (Microsoft 365 Copilot). */
+/**
+ * Adapter for copilot.microsoft.com and Microsoft 365 Copilot. copilot.cloud.microsoft
+ * now redirects to m365.cloud.microsoft/chat; that host also serves M365 home,
+ * apps and search, so the adapter is gated to /chat paths (isChatPage).
+ */
 
 import type { ChatAdapter } from './types';
 import { replaceContentEditable, queryInScope } from './dom';
@@ -6,12 +10,19 @@ import { replaceContentEditable, queryInScope } from './dom';
 export const copilotAdapter: ChatAdapter = {
   name: 'copilot',
 
+  isChatPage(): boolean {
+    return location.hostname !== 'm365.cloud.microsoft' || /^\/chat(\/|$)/.test(location.pathname);
+  },
+
   findComposer(): HTMLElement | null {
+    // Off-chat M365 pages have their own textboxes (search) the generic
+    // fallback below would grab.
+    if (!this.isChatPage!()) return null;
     return (
       document.querySelector<HTMLElement>('#userInput') ??
       document.querySelector<HTMLElement>('textarea[placeholder*="Message"]') ??
       document.querySelector<HTMLElement>('textarea[aria-label*="chat" i]') ??
-      // copilot.cloud.microsoft: rich contenteditable textbox instead of a textarea.
+      // M365 Copilot (m365.cloud.microsoft/chat): rich contenteditable textbox instead of a textarea.
       document.querySelector<HTMLElement>('#m365-chat-editor-target-element') ??
       document.querySelector<HTMLElement>('[role="textbox"][contenteditable="true"]') ??
       null

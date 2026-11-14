@@ -54,7 +54,7 @@ Detect personal data in messages typed into supported AI chat sites and replace 
 - storage: keeps the user's settings, allow/deny lists and the per-tab placeholder mapping (session storage, RAM only).
 - scripting: injects the extension's own packaged content script into already-open tabs of the supported chat sites after install/update, so protection starts without a reload. Never used on other sites, never runs remote code.
 - offscreen: hosts the optional on-device names model in an offscreen document so it never runs in the page or blocks it.
-- Host permissions (chatgpt.com, chat.openai.com, claude.ai, gemini.google.com, copilot.microsoft.com, copilot.cloud.microsoft, *.perplexity.ai, *.mistral.ai): required to read the message box and replace personal data before the site receives it. No other sites, no <all_urls>.
+- Host permissions (chatgpt.com, chat.openai.com, claude.ai, gemini.google.com, copilot.microsoft.com, copilot.cloud.microsoft, m365.cloud.microsoft, *.perplexity.ai, *.mistral.ai): required to read the message box and replace personal data before the site receives it. No other sites, no <all_urls>.
 - wasm-unsafe-eval (CSP): lets the packaged ONNX Runtime WebAssembly file compile. No remote code, no unsafe-eval.
 - Remote code: none. All code is in the package. The only network request is the opt-in, checksum-verified model download (data file, not code).
 

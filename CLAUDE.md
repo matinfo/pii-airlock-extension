@@ -49,7 +49,7 @@ lib/
     chatgpt.ts       chat.openai.com / chatgpt.com
     claude.ts        claude.ai
     gemini.ts        gemini.google.com
-    copilot.ts       copilot.microsoft.com
+    copilot.ts       copilot.microsoft.com, m365.cloud.microsoft/chat (path-gated)
     perplexity.ts    perplexity.ai
     poe.ts           poe.com
     generic.ts       Heuristic fallback for any chat UI

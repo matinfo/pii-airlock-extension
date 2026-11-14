@@ -76,6 +76,7 @@ export default defineConfig({
       'https://gemini.google.com/*',
       'https://copilot.microsoft.com/*',
       'https://copilot.cloud.microsoft/*',
+      'https://m365.cloud.microsoft/*',
       'https://*.perplexity.ai/*',
       'https://*.mistral.ai/*',
     ],

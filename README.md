@@ -117,7 +117,7 @@ Verified on the live site:
 - chatgpt.com
 - claude.ai
 - gemini.google.com
-- copilot.microsoft.com, copilot.cloud.microsoft
+- copilot.microsoft.com, copilot.cloud.microsoft, m365.cloud.microsoft/chat
 - perplexity.ai
 - chat.mistral.ai (Le Chat - Vibe)
 

@@ -17,6 +17,7 @@ export default defineContentScript({
     'https://gemini.google.com/*',
     'https://copilot.microsoft.com/*',
     'https://copilot.cloud.microsoft/*',
+    'https://m365.cloud.microsoft/*',
     'https://*.perplexity.ai/*',
     'https://*.mistral.ai/*',
   ],
@@ -140,6 +141,15 @@ export default defineContentScript({
     let settled = false; // false during the SPA mount grace period
     const reportState = () => {
       if (retired) return;
+      if (adapter.isChatPage?.() === false) {
+        // Matched host but not a chat page (e.g. M365 home): stay inert, no warn icon.
+        shield.setProtection(null);
+        const idle = isActive() ? 'on' : 'off';
+        if (idle === lastState) return;
+        lastState = idle;
+        browser.runtime.sendMessage({ type: MSG.HEALTH, state: idle }).catch(() => {});
+        return;
+      }
       const found = adapter.findComposer() !== null;
       const s = currentSettings();
       const paused = s.mode !== 'off' && !s.siteOff && Date.now() < s.pausedUntil;
