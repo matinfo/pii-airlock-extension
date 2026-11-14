@@ -9,6 +9,8 @@ interface TabStatus {
   site: string;
   host: string;
   composerFound: boolean;
+  /** false on a supported host's non-chat page (M365 home, kSuite Mail). Absent from old scripts. */
+  chatPage?: boolean;
   mode: Mode;
   siteOff: boolean;
   pausedUntil: number;
@@ -107,6 +109,7 @@ function App() {
   else if (mode === "off") status = { text: t("popOff"), tone: "off" };
   else if (siteOff) status = { text: t("popSiteOff"), tone: "off" };
   else if (paused) status = { text: t("popPaused", new Date(pausedUntil).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })), tone: "off" };
+  else if (tab.chatPage === false) status = { text: t("popNotChat"), tone: "off" };
   else if (!tab.composerFound) status = { text: t("popNoComposer"), tone: "warn" };
   else status = { text: t("popActive"), tone: "ok" };
 

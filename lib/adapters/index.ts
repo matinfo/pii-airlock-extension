@@ -11,13 +11,14 @@ import { perplexityAdapter } from './perplexity';
 import { poeAdapter } from './poe';
 import { characterAdapter } from './character';
 import { mistralAdapter } from './mistral';
+import { euriaAdapter } from './euria';
 import { huggingfaceAdapter } from './huggingface';
 import { youAdapter } from './you';
 import { genericAdapter } from './generic';
 
 /**
  * Only the sites in the content-script `matches` (entrypoints/content.ts) are
- * supported. poe / character / huggingface / you adapters are kept but
+ * supported. character / huggingface / you adapters are kept but
  * NOT shipped: they have never been verified on the live site. Re-add the host to
  * `matches` + `host_permissions` once one has passed a real-browser check.
  */
@@ -25,11 +26,12 @@ const NAMED: Array<{ hosts: string[]; adapter: ChatAdapter }> = [
   { hosts: ['chatgpt.com', 'chat.openai.com'], adapter: chatgptAdapter },
   { hosts: ['claude.ai'],                      adapter: claudeAdapter },
   { hosts: ['gemini.google.com'],              adapter: geminiAdapter },
-  { hosts: ['copilot.microsoft.com', 'copilot.cloud.microsoft'], adapter: copilotAdapter },
+  { hosts: ['copilot.microsoft.com', 'copilot.cloud.microsoft', 'm365.cloud.microsoft'], adapter: copilotAdapter },
   { hosts: ['perplexity.ai'],                  adapter: perplexityAdapter },
   { hosts: ['poe.com'],                        adapter: poeAdapter },
   { hosts: ['character.ai'],                   adapter: characterAdapter },
   { hosts: ['mistral.ai'],                     adapter: mistralAdapter },
+  { hosts: ['euria.infomaniak.com'],           adapter: euriaAdapter },
   { hosts: ['huggingface.co'],                 adapter: huggingfaceAdapter },
   { hosts: ['you.com'],                        adapter: youAdapter },
 ];

@@ -38,4 +38,10 @@ export interface ChatAdapter {
    * on. Only for sites where the generic rule in lib/ui/frame.ts fails.
    */
   findFrame?(composer: HTMLElement): HTMLElement | null;
+
+  /**
+   * Optional path gate for hosts that serve more than chat. false = this URL of
+   * a matched host is not a chat; the adapter stays inert (no composer, no warn).
+   */
+  isChatPage?(): boolean;
 }

@@ -6,7 +6,7 @@ A **standalone WXT browser extension** (Chrome/Edge MV3 + Firefox MV2) that auto
 
 - **No backend required.** Zero install friction — installs from browser store, works immediately.
 - **Pure JS detection engine** bundled inside the extension (compromise.js NER + regex).
-- Targets (verified live): ChatGPT, Claude, Gemini, Copilot, Perplexity, Mistral. Other adapters (Poe, character, huggingface, you) exist but are not shipped until verified on the live site.
+- Targets (verified live): ChatGPT, Claude, Gemini, Copilot, Perplexity, Poe, Mistral, Euria (Infomaniak). Other adapters (character, huggingface, you) exist but are not shipped until verified on the live site.
 - Enhanced mode via the `pii-airlock` proxy (localhost:8745) is NOT implemented (no code talks to it). Do not document it to users until it exists; "better detection" today = the opt-in on-device names model.
 
 ## Related project
@@ -49,9 +49,10 @@ lib/
     chatgpt.ts       chat.openai.com / chatgpt.com
     claude.ts        claude.ai
     gemini.ts        gemini.google.com
-    copilot.ts       copilot.microsoft.com
+    copilot.ts       copilot.microsoft.com, m365.cloud.microsoft/chat (path-gated)
     perplexity.ts    perplexity.ai
     poe.ts           poe.com
+    euria.ts         euria.infomaniak.com (iframe in ksuite.infomaniak.com/<id>/euria; content script allFrames + FRAMED_HOSTS guard)
     generic.ts       Heuristic fallback for any chat UI
   ui/
     components.ts    Shadow-DOM status tab + review panel + toast + failure modal
@@ -128,7 +129,7 @@ border of the composer pill (just after the left corner curve; flips under the
 bottom border near the viewport top). States: "Protected" (shrinks to the icon
 4 s after load / composer focus / route change), "N will be replaced" / "N to
 review" (live scan, regex+compromise; click opens the panel), "Noticed",
-"Checking…" (send-time analyze >150 ms), "Not protected" (paused). Driven by
+"Checking…" (send-time analyze >150 ms), "Not protected" (paused), "Reload to protect" (script orphaned by an update inside a framed chat, which the background cannot re-inject without `webNavigation`; click reloads the frame). Driven by
 `shield.setProtection` (content.ts health check), `shield.render` (scan) and
 `shield.setChecking` (intercept). The pill is found by `lib/ui/frame.ts`
 (`findFrame`: first decorated, rounded ancestor holding a button outside the

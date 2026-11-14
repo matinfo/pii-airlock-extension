@@ -9,6 +9,9 @@ import { BrowserMapping } from '../lib/mapping';
 import { startRestore } from '../lib/restore';
 import { shield } from '../lib/ui/components';
 
+/** Chat apps that live inside another site's iframe: the only subframes we run in. */
+const FRAMED_HOSTS = new Set(['euria.infomaniak.com']);
+
 export default defineContentScript({
   matches: [
     'https://chatgpt.com/*',
@@ -17,10 +20,19 @@ export default defineContentScript({
     'https://gemini.google.com/*',
     'https://copilot.microsoft.com/*',
     'https://copilot.cloud.microsoft/*',
+    'https://m365.cloud.microsoft/*',
     'https://*.perplexity.ai/*',
+    'https://poe.com/*',
     'https://*.mistral.ai/*',
+    // Infomaniak Euria: the app is an iframe inside ksuite.infomaniak.com/<id>/euria
+    // (and also opens top-level). Hence allFrames below.
+    'https://euria.infomaniak.com/*',
   ],
+  // Needed for Euria only (framed by kSuite). Other hosts bail out in subframes
+  // below, so same-origin iframes on chatgpt.com etc. never get a second guard.
+  allFrames: true,
   main(ctx) {
+    if (window !== window.top && !FRAMED_HOSTS.has(location.hostname)) return;
     // This script is "orphaned" when the extension is reloaded/updated/removed:
     // its extension APIs die but its page UI and listeners would stay, showing
     // "Protected" on a field nothing protects (a replacement script is injected
@@ -33,7 +45,11 @@ export default defineContentScript({
       retired = true;
       stopRestore?.();
       guard.destroy();
-      shield.setProtection(null);
+      // In a framed chat (Euria inside kSuite) nothing replaces this script: the
+      // background re-injects into top-level tabs only (finding frames would need
+      // the webNavigation permission). Say so on the field; a click reloads just
+      // this frame, which gets a fresh script. Top-level tabs get a replacement.
+      shield.setProtection(window !== window.top ? 'stale' : null);
     };
     ctx.onInvalidated(retire);
     // Fallback where WXT's invalidation signal is missed: runtime.id disappears.
@@ -140,6 +156,17 @@ export default defineContentScript({
     let settled = false; // false during the SPA mount grace period
     const reportState = () => {
       if (retired) return;
+      if (adapter.isChatPage?.() === false) {
+        // Matched host but not a chat page (e.g. M365 home): stay inert, no warn icon.
+        // The guard checks the gate per event; this clears what it showed in /chat.
+        guard.leaveChat();
+        shield.setProtection(null);
+        const idle = isActive() ? 'on' : 'off';
+        if (idle === lastState) return;
+        lastState = idle;
+        browser.runtime.sendMessage({ type: MSG.HEALTH, state: idle }).catch(() => {});
+        return;
+      }
       const found = adapter.findComposer() !== null;
       const s = currentSettings();
       const paused = s.mode !== 'off' && !s.siteOff && Date.now() < s.pausedUntil;
@@ -195,6 +222,7 @@ export default defineContentScript({
           site: adapter.name,
           host,
           composerFound: adapter.findComposer() !== null,
+          chatPage: adapter.isChatPage?.() !== false,
           mode: cur.mode,
           siteOff: cur.siteOff,
           pausedUntil: cur.pausedUntil,

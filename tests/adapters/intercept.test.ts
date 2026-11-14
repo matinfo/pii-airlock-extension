@@ -609,3 +609,118 @@ test('the net applies in other languages, taken from <html lang>', async () => {
     while (guards.length) guards.pop()!.destroy();
   }
 });
+
+// --- isChatPage gate (M365: one host serves chat + home/search) -------------
+
+test('off a chat page: Enter, submit and live scan all step aside', async () => {
+  let chat = false;
+  const f = makeFake('mail jane@example.com');
+  f.adapter.isChatPage = () => chat;
+  let analyzed = 0;
+  guard(f.adapter, { analyze: async () => { analyzed++; return { detections: [] } as never; } });
+
+  const ev = new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true });
+  f.composer.dispatchEvent(ev);
+  expect(ev.defaultPrevented).toBe(false);
+
+  const form = document.createElement('form');
+  form.appendChild(document.createElement('textarea'));
+  document.body.appendChild(form);
+  const sub = new Event('submit', { bubbles: true, cancelable: true });
+  form.dispatchEvent(sub);
+  expect(sub.defaultPrevented).toBe(false);
+
+  f.composer.dispatchEvent(new Event('input', { bubbles: true }));
+  await new Promise((r) => setTimeout(r, 450));
+  expect(analyzed).toBe(0);
+
+  // SPA nav into the chat: same guard, no reinstall, now intercepts.
+  chat = true;
+  const ev2 = new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true });
+  f.composer.dispatchEvent(ev2);
+  expect(ev2.defaultPrevented).toBe(true);
+});
+
+test('leaving the chat drops a pending scan and clears the chip', async () => {
+  let chat = true;
+  const f = makeFake('write to jane@example.com');
+  f.adapter.isChatPage = () => chat;
+  const { shield } = await import('../../lib/ui/components');
+  const orig = shield.render.bind(shield);
+  let last: number | null = null;
+  shield.render = (state, keep) => { last = state.items.length + state.notices.length; return orig(state, keep); };
+  try {
+    const g = guard(f.adapter) as InstanceType<typeof SendGuard>;
+    f.composer.dispatchEvent(new Event('input', { bubbles: true })); // schedules a scan
+    chat = false;
+    g.leaveChat();
+    expect(last).toBe(0);
+    await new Promise((r) => setTimeout(r, 700));
+    expect(last).toBe(0); // the pending scan never rendered its items
+  } finally {
+    shield.render = orig;
+  }
+});
+
+test('leaving the chat while analyze is pending abandons the send', async () => {
+  let chat = true;
+  const f = makeFake('mail jane@example.com');
+  f.adapter.isChatPage = () => chat;
+  let release!: (r: any) => void;
+  const analyzeFn = (() => new Promise((res) => { release = res; })) as any;
+  const g = guard(f.adapter, { analyze: analyzeFn }) as InstanceType<typeof SendGuard>;
+  pressEnter(f.composer);
+  await settle(2);
+  chat = false;
+  g.leaveChat();
+  release({
+    decision: 'auto_scrub',
+    error: false,
+    detections: [{ entityType: 'EMAIL_ADDRESS', value: 'jane@example.com', start: 5, end: 21, score: 1, source: 'regex' }],
+  });
+  await settle();
+  expect(f.sends.length).toBe(0);
+  expect(f.setTextCalls.length).toBe(0);
+  expect(f.composer.textContent).toContain('jane@example.com');
+});
+
+test('leaving the chat cancels an open send-time review (prefilled draft, no input event)', async () => {
+  let chat = true;
+  applySettings({ mode: 'review' });
+  const f = makeFake('mail jane@example.com');
+  f.adapter.isChatPage = () => chat;
+  const { shield } = await import('../../lib/ui/components');
+  const origReview = shield.reviewBeforeSend.bind(shield);
+  let resolveReview!: (a: 'send' | 'cancel') => void;
+  let cancelled = false;
+  shield.reviewBeforeSend = () => new Promise((res) => {
+    resolveReview = (a) => { if (a === 'cancel') cancelled = true; res(a); };
+  }) as any;
+  const origRender = shield.render.bind(shield);
+  shield.render = (state, keep) => {
+    if (!state.items.length && !state.notices.length) resolveReview?.('cancel');
+    return origRender(state, keep);
+  };
+  try {
+    const g = guard(f.adapter) as InstanceType<typeof SendGuard>;
+    pressEnter(f.composer);
+    await settle();
+    expect(resolveReview).toBeDefined();
+    chat = false;
+    g.leaveChat(); // must not early-return: a review is pending
+    await settle();
+    expect(cancelled).toBe(true);
+    expect(f.sends.length).toBe(0);
+    expect(f.composer.textContent).toContain('jane@example.com');
+  } finally {
+    shield.reviewBeforeSend = origReview;
+    shield.render = origRender;
+  }
+});
+
+test('leaveChat when idle stays a no-op', () => {
+  const f = makeFake('hello');
+  const g = guard(f.adapter) as InstanceType<typeof SendGuard>;
+  g.leaveChat();
+  g.leaveChat();
+});

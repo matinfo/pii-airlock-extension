@@ -1,18 +1,15 @@
-/** Adapter for poe.com. */
+/** Adapter for poe.com: React-controlled growing textarea, send button `data-button-send`. */
 
 import type { ChatAdapter } from './types';
-import { queryInScope } from './dom';
+import { queryInScope, setTextControl, isTextControl } from './dom';
 
 export const poeAdapter: ChatAdapter = {
   name: 'poe',
 
   findComposer(): HTMLElement | null {
     return (
-      // Main chat input — Poe uses a growing textarea
-      document.querySelector<HTMLElement>('textarea[class*="GrowingTextArea"]') ??
+      document.querySelector<HTMLElement>('textarea[class*="GrowingTextArea_textArea"]') ??
       document.querySelector<HTMLElement>('[class*="ChatMessageInputContainer"] textarea') ??
-      document.querySelector<HTMLElement>('textarea[placeholder*="Talk"]') ??
-      document.querySelector<HTMLElement>('textarea[placeholder*="Message"]') ??
       null
     );
   },
@@ -20,27 +17,22 @@ export const poeAdapter: ChatAdapter = {
   findSendButton(composer?: HTMLElement): HTMLElement | null {
     const c = composer ?? this.findComposer();
     return (
-      queryInScope(c, 'button[class*="SendButton"]') ??
-      queryInScope(c, '[class*="ChatMessageInputContainer"] button[type="submit"]') ??
-      queryInScope(c, 'button[aria-label*="Send" i]') ??
+      queryInScope(c, 'button[data-button-send="true"]') ??
+      queryInScope(c, 'button[aria-label="Send message" i]') ??
       null
     );
   },
 
   getText(composer: HTMLElement): string {
-    return (composer as HTMLTextAreaElement).value ?? composer.innerText ?? '';
+    return isTextControl(composer) ? composer.value : composer.innerText ?? '';
   },
 
   setText(composer: HTMLElement, text: string): void {
-    const nativeSetter = Object.getOwnPropertyDescriptor(
-      HTMLTextAreaElement.prototype, 'value',
-    )?.set;
-    nativeSetter?.call(composer, text);
-    composer.dispatchEvent(new Event('input', { bubbles: true }));
+    if (isTextControl(composer)) setTextControl(composer, text);
   },
 
   triggerSend(composer: HTMLElement): void {
-    const btn = this.findSendButton();
+    const btn = this.findSendButton(composer);
     if (btn) { btn.click(); return; }
     composer.dispatchEvent(
       new KeyboardEvent('keydown', { key: 'Enter', code: 'Enter', bubbles: true }),

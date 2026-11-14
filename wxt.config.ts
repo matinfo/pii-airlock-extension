@@ -76,8 +76,11 @@ export default defineConfig({
       'https://gemini.google.com/*',
       'https://copilot.microsoft.com/*',
       'https://copilot.cloud.microsoft/*',
+      'https://m365.cloud.microsoft/*',
       'https://*.perplexity.ai/*',
+      'https://poe.com/*',
       'https://*.mistral.ai/*',
+      'https://euria.infomaniak.com/*',
     ],
     action: {
       default_title: 'PII Airlock',
