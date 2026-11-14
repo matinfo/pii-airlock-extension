@@ -212,6 +212,31 @@ export class SendGuard {
     this.mapping.clear();
   }
 
+  /**
+   * Off a chat page of a matched host (M365 home, …: adapter.isChatPage() false)
+   * the guard stays out of the way: other text fields there are not chat input.
+   * Checked at event time, so SPA navigation into/out of the chat needs no reinstall.
+   */
+  private offChat(): boolean {
+    return this.adapter.isChatPage?.() === false;
+  }
+
+  /**
+   * Navigation left the chat: drop the pending scan, its result and the chip/panel.
+   * Idempotent and cheap when there is nothing to clear (called on every health tick).
+   */
+  leaveChat(): void {
+    if (!this.liveEditable && !this.scanQueued && this.pendingItems === 0) return;
+    clearTimeout(this.scanTimer);
+    this.scanSeq++; // an in-flight scan must not render
+    this.scanQueued = false;
+    this.pendingItems = 0;
+    this.excluded.clear();
+    this.liveEditable = null;
+    this.watcher?.disconnect(); this.watched = null;
+    shield.render({ items: [], notices: [], mode: 'auto', paused: false });
+  }
+
   /** Wipe the in-memory token mapping (popup "clear" button). */
   clearMapping(): void {
     this.mapping.clear();
@@ -222,7 +247,7 @@ export class SendGuard {
   // ---------------------------------------------------------------------------
 
   private handleKeydown(e: KeyboardEvent): void {
-    if (this._sending || !isActive()) return;
+    if (this._sending || !isActive() || this.offChat()) return;
     if (e.key !== 'Enter') return;
     // Shift/Alt+Enter = newline. IME confirmation (CJK) is not a send; keyCode
     // 229 covers browsers that fire keydown after compositionend.
@@ -236,7 +261,7 @@ export class SendGuard {
   }
 
   private handleClick(e: MouseEvent): void {
-    if (this._sending || !isActive()) return;
+    if (this._sending || !isActive() || this.offChat()) return;
     const btn = buttonFrom(e);
     if (!btn) return;
     const composer = this.adapter.findComposer();
@@ -254,7 +279,7 @@ export class SendGuard {
   }
 
   private handleSubmit(e: Event): void {
-    if (this._sending || !isActive()) return;
+    if (this._sending || !isActive() || this.offChat()) return;
     const form = e.target;
     if (!(form instanceof HTMLFormElement)) return;
     const editable =
@@ -308,7 +333,7 @@ export class SendGuard {
   }
 
   private scheduleScan(editable: HTMLElement | null): void {
-    if (!editable) return;
+    if (!editable || this.offChat()) return;
     // While a send is being evaluated/performed our own writes fire input events;
     // a scan then would re-draw the chip over a message that is already leaving.
     if (this._busy || this._sending) return;
@@ -347,7 +372,7 @@ export class SendGuard {
       this.excluded.clear(); shield.render({ items: [], notices: [], mode: 'auto', paused: false }); return;
     }
     const r = await this.analyze(text, { skipNer: true });
-    if (seq !== this.scanSeq || r.error || this._busy) return;
+    if (seq !== this.scanSeq || r.error || this._busy || this.offChat()) return;
     const state = this.chipState(r.detections);
     this.pendingItems = state.items.length;
     this.scanQueued = false;

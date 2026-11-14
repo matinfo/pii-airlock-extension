@@ -154,6 +154,8 @@ export default defineContentScript({
       if (retired) return;
       if (adapter.isChatPage?.() === false) {
         // Matched host but not a chat page (e.g. M365 home): stay inert, no warn icon.
+        // The guard checks the gate per event; this clears what it showed in /chat.
+        guard.leaveChat();
         shield.setProtection(null);
         const idle = isActive() ? 'on' : 'off';
         if (idle === lastState) return;
