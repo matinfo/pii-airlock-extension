@@ -54,6 +54,8 @@ type Origin =
 interface Ctx {
   editable: HTMLElement;
   origin: Origin;
+  /** `navSeq` when the send began; a mismatch means the user left the chat. */
+  epoch: number;
 }
 
 const EDITABLE_SEL = '[contenteditable]:not([contenteditable="false"])';
@@ -134,6 +136,10 @@ export class SendGuard {
   /** Items the user unticked for the current message (type|value keys). */
   private excluded = new Set<string>();
   private scanSeq = 0;
+  /** Send/scrub epoch: bumped by leaveChat() so in-flight pipelines abandon silently. */
+  private navSeq = 0;
+  /** True while a paste-banner scrubInPlace runs. */
+  private _scrubbing = false;
   /** Items the last live scan wants replaced (0 = clean or unknown). */
   private pendingItems = 0;
   /** An edit happened and its scan has not finished yet. */
@@ -226,9 +232,10 @@ export class SendGuard {
    * Idempotent and cheap when there is nothing to clear (called on every health tick).
    */
   leaveChat(): void {
-    if (!this.liveEditable && !this.scanQueued && this.pendingItems === 0) return;
+    if (!this.liveEditable && !this.scanQueued && this.pendingItems === 0 && !this._busy && !this._scrubbing) return;
     clearTimeout(this.scanTimer);
     this.scanSeq++; // an in-flight scan must not render
+    this.navSeq++; // an in-flight send/review/scrub must not act
     this.scanQueued = false;
     this.pendingItems = 0;
     this.excluded.clear();
@@ -413,7 +420,12 @@ export class SendGuard {
   // Pipeline
   // ---------------------------------------------------------------------------
 
-  private start(ctx: Ctx): void {
+  private stale(epoch: number): boolean {
+    return epoch !== this.navSeq;
+  }
+
+  private start(input: Omit<Ctx, 'epoch'>): void {
+    const ctx: Ctx = { ...input, epoch: this.navSeq };
     // Re-entrant intents (double Enter, click during analysis, Enter while the
     // review panel is open) are swallowed. The listener already prevented the
     // default.
@@ -440,6 +452,7 @@ export class SendGuard {
         clearTimeout(checking);
         shield.setChecking(false);
       }
+      if (this.stale(ctx.epoch)) return; // left the chat while analysing
       // Typing continued during analysis → this result describes old text.
       if (this.read(ctx.editable) !== text) continue;
 
@@ -456,6 +469,7 @@ export class SendGuard {
     result: DetectionResult,
   ): Promise<'done' | 'retry'> {
     const { decision, detections } = result;
+    if (this.stale(ctx.epoch)) return 'done';
 
     // Engine failure: detections are empty/untrustworthy. Scrubbing would scrub
     // NOTHING and then pass the leak check. Only Edit or explicit raw send.
@@ -477,7 +491,7 @@ export class SendGuard {
         // Review mode: show exactly what will change, let the user adjust.
         const state = this.chipState(detections);
         const action = await shield.reviewBeforeSend(state);
-        if (action === 'cancel') return 'done';
+        if (action === 'cancel' || this.stale(ctx.epoch)) return 'done';
         return this.scrubAndSend(ctx, text, detections);
       }
 
@@ -494,8 +508,9 @@ export class SendGuard {
     kind: 'error' | 'scrub-failed',
     detections: Detection[],
   ): Promise<void> {
+    if (this.stale(ctx.epoch)) return;
     const action = await showModal(kind, detections.map((d) => d.entityType));
-    if (action === 'send-unscanned') await this.send(ctx);
+    if (action === 'send-unscanned' && !this.stale(ctx.epoch)) await this.send(ctx);
   }
 
   /**
@@ -515,7 +530,9 @@ export class SendGuard {
     // while the user kept typing: re-analyse instead of clobbering their edits.
     if (this.read(ctx.editable) !== analysed) return 'retry';
 
+    if (this.stale(ctx.epoch)) return 'done';
     const ok = await this.commitScrub(ctx.editable, analysed, toScrub);
+    if (this.stale(ctx.epoch)) return 'done';
     if (!ok) {
       console.error('[pii-airlock] scrub did not commit to the composer; send blocked');
       await this.failure(ctx, 'scrub-failed', toScrub);
@@ -556,14 +573,26 @@ export class SendGuard {
 
   /** Paste banner "Scrub now": analyse the CURRENT full composer text and scrub it. */
   private async scrubInPlace(editable: HTMLElement): Promise<void> {
+    const epoch = this.navSeq;
+    this._scrubbing = true;
+    try {
+      await this.scrubInPlaceInner(editable, epoch);
+    } finally {
+      this._scrubbing = false;
+    }
+  }
+
+  private async scrubInPlaceInner(editable: HTMLElement, epoch: number): Promise<void> {
     for (let i = 0; i < MAX_RETRIES; i++) {
       const text = this.read(editable);
       const r = await this.analyze(text);
-      if (r.error) return;
+      if (this.stale(epoch) || r.error) return;
       if (this.read(editable) !== text) continue;
       const toScrub = r.detections.filter(mustScrub).filter((d) => !this.excluded.has(this.keyOf(d)));
       if (toScrub.length === 0) return;
-      if (await this.commitScrub(editable, text, toScrub)) {
+      const committed = await this.commitScrub(editable, text, toScrub);
+      if (this.stale(epoch)) return;
+      if (committed) {
         this._onScrub?.(toScrub.length);
         this.afterSend(toScrub, false);
         void this.scan(editable);
@@ -618,6 +647,7 @@ export class SendGuard {
    * and forms: replay the original gesture.
    */
   private async send(ctx: Ctx): Promise<void> {
+    if (this.stale(ctx.epoch)) return;
     this._sending = true;
     try {
       const composer = this.adapter.findComposer();
@@ -629,6 +659,7 @@ export class SendGuard {
         ctx.origin.target.click(); // not a known send button: replay exactly what the user clicked
       } else if (isMain) {
         await this.waitForSendButton(composer);
+        if (this.stale(ctx.epoch)) return;
         this.adapter.triggerSend(composer);
       } else if (ctx.origin.kind === 'click') {
         ctx.origin.target.click();
