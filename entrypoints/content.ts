@@ -45,7 +45,11 @@ export default defineContentScript({
       retired = true;
       stopRestore?.();
       guard.destroy();
-      shield.setProtection(null);
+      // In a framed chat (Euria inside kSuite) nothing replaces this script: the
+      // background re-injects into top-level tabs only (finding frames would need
+      // the webNavigation permission). Say so on the field; a click reloads just
+      // this frame, which gets a fresh script. Top-level tabs get a replacement.
+      shield.setProtection(window !== window.top ? 'stale' : null);
     };
     ctx.onInvalidated(retire);
     // Fallback where WXT's invalidation signal is missed: runtime.id disappears.

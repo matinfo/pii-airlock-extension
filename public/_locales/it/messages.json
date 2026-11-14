@@ -39,6 +39,12 @@
   "tabProtected": {
     "message": "Protetto"
   },
+  "tabReload": {
+    "message": "Ricarica per proteggere"
+  },
+  "markerReload": {
+    "message": "PII Airlock è stato aggiornato. Fai clic per ricaricare questa chat e restare protetto."
+  },
   "tabNotProtected": {
     "message": "Non protetto"
   },

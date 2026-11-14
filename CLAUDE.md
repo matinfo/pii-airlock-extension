@@ -129,7 +129,7 @@ border of the composer pill (just after the left corner curve; flips under the
 bottom border near the viewport top). States: "Protected" (shrinks to the icon
 4 s after load / composer focus / route change), "N will be replaced" / "N to
 review" (live scan, regex+compromise; click opens the panel), "Noticed",
-"Checking…" (send-time analyze >150 ms), "Not protected" (paused). Driven by
+"Checking…" (send-time analyze >150 ms), "Not protected" (paused), "Reload to protect" (script orphaned by an update inside a framed chat, which the background cannot re-inject without `webNavigation`; click reloads the frame). Driven by
 `shield.setProtection` (content.ts health check), `shield.render` (scan) and
 `shield.setChecking` (intercept). The pill is found by `lib/ui/frame.ts`
 (`findFrame`: first decorated, rounded ancestor holding a button outside the

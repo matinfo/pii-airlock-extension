@@ -212,8 +212,12 @@ export interface ChipState {
 
 type PanelMode = 'live' | 'review' | 'after';
 
-/** Health of the field, from the content script: protected, paused (NOT protected), or nothing. */
-export type Protection = 'on' | 'paused' | null;
+/**
+ * Health of the field, from the content script: protected, paused (NOT protected),
+ * stale (this script was orphaned by an extension update and nothing replaced it:
+ * click reloads the frame), or nothing.
+ */
+export type Protection = 'on' | 'paused' | 'stale' | null;
 
 const TAB_H = 22;
 /** How far the tab overlaps the pill's top border (the rest sits above it). */
@@ -236,6 +240,8 @@ class Shield {
   private raf = 0;
   private bound = false;
   private protection: Protection = null;
+  /** 'stale' copy, read while extension APIs still work (they die on orphaning). */
+  private staleText = { label: '', title: '' };
   private checking = false;
   private compact = false;
   private revealTimer: ReturnType<typeof setTimeout> | undefined;
@@ -244,6 +250,7 @@ class Shield {
   private frameOf: { composer: HTMLElement; frame: HTMLElement; until: number } | null = null;
 
   init(anchor: () => Anchor | null, handlers: ShieldHandlers): void {
+    this.staleText = { label: t('tabReload'), title: t('markerReload') };
     this.anchor = anchor;
     this.handlers = handlers;
     if (!this.bound) {
@@ -318,7 +325,8 @@ class Shield {
     const paused = this.protection === 'paused' || s.paused;
     const n = s.items.filter((i) => i.checked).length;
     const hasList = s.items.length > 0 || s.notices.length > 0;
-    const visible = paused || this.checking || hasList || this.protection === 'on';
+    const stale = this.protection === 'stale';
+    const visible = stale || paused || this.checking || hasList || this.protection === 'on';
     if (!visible) {
       clearInterval(this.tick); this.tick = undefined;
       this.tab?.remove(); this.tab = null;
@@ -330,6 +338,7 @@ class Shield {
       this.tab.type = 'button';
       this.tab.addEventListener('click', (e) => {
         e.stopPropagation();
+        if (this.protection === 'stale') { location.reload(); return; }
         if (!this.tab?.classList.contains('clickable')) { this.reveal(); return; }
         this.panel ? this.closePanel('cancel') : this.openLive();
       });
@@ -340,7 +349,10 @@ class Shield {
     let glyph: 'shield' | 'pause' = 'shield';
     let muted = false;
     let shrinkable = false;
-    if (paused) {
+    // stale: no t() here, i18n is gone with the extension context.
+    if (stale) {
+      label = this.staleText.label; glyph = 'pause'; muted = true;
+    } else if (paused) {
       label = t('tabNotProtected'); glyph = 'pause'; muted = true;
     } else if (this.checking) {
       label = t('tabChecking');
@@ -351,7 +363,7 @@ class Shield {
     } else {
       label = t('tabProtected'); shrinkable = true;
     }
-    const clickable = !paused && !this.checking && hasList;
+    const clickable = !stale && !paused && !this.checking && hasList;
     const tab = this.tab;
     tab.classList.toggle('muted', muted);
     tab.classList.toggle('clickable', clickable);
@@ -361,7 +373,7 @@ class Shield {
       tab.dataset.glyph = glyph;
       tab.replaceChildren(icon(glyph), el('span', 'lbl', label));
     }
-    const full = paused ? t('markerPaused') : shrinkable ? t('markerOn') : `${t('appName')}: ${label}`;
+    const full = stale ? this.staleText.title : paused ? t('markerPaused') : shrinkable ? t('markerOn') : `${t('appName')}: ${label}`;
     tab.title = full;
     tab.setAttribute('aria-label', full);
     if (clickable) {

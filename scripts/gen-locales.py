@@ -20,6 +20,8 @@ T = {
  'markerOn': ('PII Airlock protects this field: personal data is replaced before sending.', 'PII Airlock protège ce champ : les données personnelles sont remplacées avant l’envoi.', 'PII Airlock schützt dieses Feld: personenbezogene Daten werden vor dem Senden ersetzt.'),
  'markerPaused': ('PII Airlock is paused: this field is NOT protected.', 'PII Airlock est en pause : ce champ n’est PAS protégé.', 'PII Airlock ist pausiert: dieses Feld ist NICHT geschützt.'),
  'tabProtected': ('Protected', 'Protégé', 'Geschützt'),
+ 'tabReload': ('Reload to protect', 'Recharger pour protéger', 'Neu laden zum Schützen'),
+ 'markerReload': ('PII Airlock was updated. Click to reload this chat and stay protected.', 'PII Airlock a été mis à jour. Cliquez pour recharger ce chat et rester protégé.', 'PII Airlock wurde aktualisiert. Klicken, um diesen Chat neu zu laden und geschützt zu bleiben.'),
  'tabNotProtected': ('Not protected', 'Non protégé', 'Nicht geschützt'),
  'tabChecking': ('Checking…', 'Vérification…', 'Prüfung…'),
  'panelLive': ('Replaced when you send', 'Remplacé à l’envoi', 'Wird beim Senden ersetzt'),
